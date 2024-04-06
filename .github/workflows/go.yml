@@ -1,0 +1,32 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+name: Build Release
+on:
+  push:
+    # Pattern matched against refs/tags
+    tags:      
+      - 'v*'           # 创建所有tag都运行打包 v* 则 v1.0这种也行
+  workflow_dispatch: 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: 
+      contents: write
+      packages: write
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ">=1.20"
+        cache: true
+    - name: Check golang version
+      run: go version
+      # 使用 goreleaser 进行生成多平台代码并且上传到github release进行发布
+    - name: Create release on GitHub
+      uses: docker://goreleaser/goreleaser:latest
+      with:
+        cache: true
+        args: release --clean
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
