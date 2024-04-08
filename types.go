@@ -2,15 +2,7 @@ package main
 
 import (
 	"os"
-
-	sdk "github.com/imshuai/alistsdk-go"
 )
-
-type File struct {
-	sdk.File
-	RemoteDir string `json:"remote_dir"`
-	LocalDir  string `json:"local_dir"`
-}
 
 type Strm struct {
 	Name   string `json:"name"`
