@@ -142,3 +142,8 @@ func removeSpecialChars(s string) string {
 		return -1
 	}, s)
 }
+
+// 替换字符串中的空格为'-'
+func replaceSpaceToDash(s string) string {
+	return strings.ReplaceAll(s, " ", "-")
+}

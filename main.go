@@ -20,11 +20,14 @@ var (
 )
 
 func main() {
+	//初始化日志模块
 	logger = logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
 	})
+
+	//初始化并设置app实例
 	app := cli.NewApp()
 	app.Name = "AlistAutoStrm"
 	app.Description = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
@@ -63,6 +66,8 @@ func main() {
 			logger.SetLevel(logrus.DebugLevel)
 			logger.Infoln("set log level to debug")
 		}
+
+		//输出配置文件调试信息
 		logger.Debugf("endpoint: %s", config.Endpoint)
 		logger.Debugf("username: %s", config.Username)
 		logger.Debugf("password: %s", config.Password)
@@ -72,6 +77,7 @@ func main() {
 		logger.Debugf("exts: %+v", config.Exts)
 		logger.Debugf("dirs: %+v", config.Dirs)
 
+		//初始化ALIST Client
 		client := sdk.NewClient(config.Endpoint, config.Username, config.Password, config.InscureTLSVerify, config.Timeout)
 		u, err := client.Login()
 		if err != nil {
@@ -122,7 +128,7 @@ func main() {
 					ext := filepath.Ext(f.Name)
 					name := strings.TrimSuffix(f.Name, ext)
 					name = strings.ToUpper(name)
-					return removeSpecialChars(name) + ".strm"
+					return replaceSpaceToDash(name) + ".strm"
 				}(),
 				Dir:    f.LocalDir,
 				RawURL: config.Endpoint + "/d" + urlEncode(f.RemoteDir) + "/" + urlEncode(f.Name),
