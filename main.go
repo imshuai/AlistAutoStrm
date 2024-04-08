@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
-	"strings"
-	"sync"
 
 	sdk "github.com/imshuai/alistsdk-go"
 	"github.com/sirupsen/logrus"
@@ -85,12 +82,6 @@ func main() {
 		}
 		logger.Infoln("login success, username:", u.Username)
 
-		files := make(chan File, 10000)
-		wg := &sync.WaitGroup{}
-		concurrentChan := make(chan struct{}, config.MaxConnections)
-		for i := 0; i < config.MaxConnections; i++ {
-			concurrentChan <- struct{}{}
-		}
 		for _, dir := range config.Dirs {
 			if dir.Disabled {
 				logger.Infof("dir [%s] is disabled, ignore", dir.LocalDirectory)
@@ -110,34 +101,16 @@ func main() {
 						return " recursively"
 					}
 				}())
-				//go FetchRemoteFile(wg, client, dir.LocalDirectory, rDir, config.CreateSubDirectory || dir.CreateSubDirectory, !dir.NotRescursive, config.Exts, files)
-				wg.Add(1)
-				go goGetFiles(wg, client, dir.LocalDirectory, rDir, rDir, config.CreateSubDirectory || dir.CreateSubDirectory, !dir.NotRescursive, dir.ForceRefresh, config.Exts, files, concurrentChan)
-			}
-		}
-		go func() {
-			wg.Wait()
-			close(files)
-			logger.Debugln("close files channel")
-		}()
-		for f := range files {
-			logger.Debugf("generate .strm file [%s] to local dir [%s]", f.Name, f.LocalDir)
-			strm := Strm{
-				Name: func() string {
-					//change f.Name to Upper letter except the extension and return the name with extension .strm
-					ext := filepath.Ext(f.Name)
-					name := strings.TrimSuffix(f.Name, ext)
-					name = strings.ToUpper(name)
-					return replaceSpaceToDash(name) + ".strm"
-				}(),
-				Dir:    f.LocalDir,
-				RawURL: config.Endpoint + "/d" + urlEncode(f.RemoteDir) + "/" + urlEncode(f.Name),
-			}
-			err := strm.Save()
-			if err != nil {
-				logger.Errorln(err)
-			} else {
-				logger.Infof("generate [%s] ==> [%s] success", strm.Dir+"/"+strm.Name, strm.RawURL)
+				m := &Mission{
+					CurrentRemotePath:    rDir,
+					LocalPath:            dir.LocalDirectory,
+					Exts:                 config.Exts,
+					IsCreateSubDirectory: config.CreateSubDirectory || dir.CreateSubDirectory,
+					IsRecursive:          !dir.NotRescursive,
+					IsForceRefresh:       dir.ForceRefresh,
+					client:               client,
+				}
+				m.Run(config.MaxConnections)
 			}
 		}
 		logger.Infoln("generate all strm file done, exit")
@@ -146,6 +119,6 @@ func main() {
 	e := app.Run(os.Args)
 	//e := app.Run([]string{"--config", "config.json"})
 	if e != nil {
-		logger.Errorln(e)
+		logger.Error(e)
 	}
 }

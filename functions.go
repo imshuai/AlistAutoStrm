@@ -77,44 +77,6 @@ func GetFiles(c *sdk.Client, path string, isRecursive bool, exts []string) ([]Fi
 	return files, nil
 }
 
-func goGetFiles(wg *sync.WaitGroup, c *sdk.Client, localDirectory, remoteRootPath, entryPath string, isCreateSubDirectory, isRecursive bool, isForceRefresh bool, exts []string, files chan<- File, concurrentChan chan struct{}) {
-	defer func() {
-		wg.Done()
-		concurrentChan <- struct{}{}
-	}()
-	<-concurrentChan
-
-	logger.Debugf("GetFiles from: %s, recursively: %t, include exts: %v", entryPath, isRecursive, exts)
-	aFiles, err := c.List(entryPath, "", 1, 0, isForceRefresh)
-	if err != nil {
-		logger.Errorf("get files from [%s] error: %s", entryPath, err.Error())
-		return
-	}
-	for _, v := range aFiles {
-		if v.IsDir && isRecursive {
-			wg.Add(1)
-			go goGetFiles(wg, c, localDirectory, remoteRootPath, entryPath+"/"+v.Name, isCreateSubDirectory, isRecursive, isForceRefresh, exts, files, concurrentChan)
-		} else {
-			f := File{
-				v,
-				entryPath,
-				"",
-			}
-			if checkExt(v.Name, exts) {
-				f.LocalDir = func() string {
-					if isCreateSubDirectory {
-						return strings.ReplaceAll(f.RemoteDir, remoteRootPath, localDirectory)
-					} else {
-						return localDirectory
-					}
-				}()
-				logger.Debugf("bind file [%s] to local dir [%s]", f.Name, f.LocalDir)
-				files <- f
-			}
-		}
-	}
-}
-
 func checkExt(name string, exts []string) bool {
 	for _, v := range exts {
 		if strings.ToLower(filepath.Ext(name)) == v {
@@ -131,16 +93,6 @@ func urlEncode(s string) string {
 		vv = append(vv, url.PathEscape(v))
 	}
 	return strings.Join(vv, "/")
-}
-
-// 删除字符串中所有不是0-9a-zA-Z以及'-'和'@'的字符
-func removeSpecialChars(s string) string {
-	return strings.Map(func(r rune) rune {
-		if (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '-' || r == '@' {
-			return r
-		}
-		return -1
-	}, s)
 }
 
 // 替换字符串中的空格为'-'
