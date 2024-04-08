@@ -9,7 +9,6 @@ builds:
     goos: # 编译平台列表 
       - linux
       - windows
-      - darwin
     goarch:
       - arm
       - arm64
@@ -24,10 +23,6 @@ builds:
         goos: windows
       - goarch: arm64
         goos: windows
-      - goarch: 386
-        goos: darwin
-      - goarch: arm
-        goos: darwin
 checksum:
   name_template: 'checksums.txt'
 archives:
