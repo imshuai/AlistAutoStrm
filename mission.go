@@ -63,7 +63,8 @@ func (m *Mission) walk() {
 						ext := filepath.Ext(f.Name)
 						name := strings.TrimSuffix(f.Name, ext)
 						//name = strings.ToUpper(name)
-						return replaceSpaceToDash(name) + ".strm"
+						//return replaceSpaceToDash(name) + ".strm"
+						return name + ".strm"
 					}(),
 					Dir:    m.LocalPath,
 					RawURL: config.Endpoint + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name),

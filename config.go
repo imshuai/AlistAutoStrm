@@ -5,7 +5,7 @@ type Config struct {
 	Username           string   `json:"username" yaml:"username"`
 	Password           string   `json:"password" yaml:"password"`
 	InscureTLSVerify   bool     `json:"inscure-tls-verify" yaml:"inscure-tls-verify"`
-	Debug              bool     `json:"debug" yaml:"debug"`
+	Loglevel           string   `json:"loglevel" yaml:"loglevel"`
 	Timeout            int      `json:"timeout" yaml:"timeout"`
 	Dirs               []Dir    `json:"dirs" yaml:"dirs"`
 	Exts               []string `json:"exts" yaml:"exts"`

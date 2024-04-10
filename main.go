@@ -58,10 +58,24 @@ func main() {
 				return errors.New("unmarshal yaml type config file error: " + err.Error())
 			}
 		}
-		logger.Infoln("read config file success")
-		if config.Debug {
+		logger.Info("read config file success")
+
+		logger.Infof("set log level: %s", config.Loglevel)
+		switch config.Loglevel {
+		case "debug", "DEBUG":
 			logger.SetLevel(logrus.DebugLevel)
-			logger.Infoln("set log level to debug")
+		case "info", "INFO":
+			logger.SetLevel(logrus.InfoLevel)
+		case "warn", "WARN":
+			logger.SetLevel(logrus.WarnLevel)
+		case "error", "ERROR":
+			logger.SetLevel(logrus.ErrorLevel)
+		case "fatal", "FATAL":
+			logger.SetLevel(logrus.FatalLevel)
+		case "panic", "PANIC":
+			logger.SetLevel(logrus.PanicLevel)
+		default:
+			logger.SetLevel(logrus.InfoLevel)
 		}
 
 		//输出配置文件调试信息
@@ -80,13 +94,17 @@ func main() {
 		if err != nil {
 			return errors.New("login error: " + err.Error())
 		}
-		logger.Infoln("login success, username:", u.Username)
+		logger.Info("login success, username:", u.Username)
 
+		//开始按配置文件遍历远程目录
 		for _, dir := range config.Dirs {
 			if dir.Disabled {
 				logger.Infof("dir [%s] is disabled, ignore", dir.LocalDirectory)
 				continue
 			}
+
+			//TODO 遍历本地目录中已有文件内容，生成hash表，判断本地文件是否需要更新
+
 			logger.Infoln("start generate .strm file to", dir.LocalDirectory)
 			logger.Debugln("create local directory", dir.LocalDirectory)
 			err := os.MkdirAll(dir.LocalDirectory, 0666)

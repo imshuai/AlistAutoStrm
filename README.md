@@ -34,12 +34,14 @@ D:\AlistAutoStrm\bin>ass_windows_amd64.exe --config config.json
     "username": "",
     "password": "",
     "inscure-tls-verify": false,
-    "debug": false,
+    "loglevel": "info",
     "timeout": 30,
     "dirs": [
         {
-            "remote-dir": "/",
-            "local-dir": "path_to_local_directory",
+            "remote-directories": [
+               "/"
+            ],
+            "local-directory": "path_to_local_directory",
             "disabled":false,
             "force-refresh":false,
             "not-recursive":false,
@@ -61,11 +63,12 @@ endpoint: https://alist.cn
 username: ""
 password: ""
 inscure-tls-verify: false
-debug: false
+loglevel: info
 timeout: 30
 dirs:
-  - remote-dir: /
-    local-dir: path_to_local_directory
+  - remote-directories: 
+      - /
+    local-directory: path_to_local_directory
     disabled: false
     force-refresh: false
     not-recursive: false
