@@ -69,7 +69,7 @@ func (m *Mission) walk() {
 					Dir:    m.LocalPath,
 					RawURL: config.Endpoint + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name),
 				}
-				err := strm.Save()
+				err := strm.GenStrm()
 				if err != nil {
 					logger.Errorf("save file [%s] error: %s", m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}

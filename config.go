@@ -1,6 +1,7 @@
 package main
 
 type Config struct {
+	Database           string   `json:"database" yaml:"database"`
 	Endpoint           string   `json:"endpoint" yaml:"endpoint"`
 	Username           string   `json:"username" yaml:"username"`
 	Password           string   `json:"password" yaml:"password"`

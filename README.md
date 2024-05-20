@@ -30,6 +30,7 @@ D:\AlistAutoStrm\bin>ass_windows_amd64.exe --config config.json
 ### JSON format JSON格式
 ```json
 {
+   "database": "strm.db",
     "endpoint": "https://alist.cn",
     "username": "",
     "password": "",
@@ -59,6 +60,7 @@ D:\AlistAutoStrm\bin>ass_windows_amd64.exe --config config.json
 ```
 ### YAML format YAML格式  
 ```yaml
+database: strm.db
 endpoint: https://alist.cn
 username: ""
 password: ""
