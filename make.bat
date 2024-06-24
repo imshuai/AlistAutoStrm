@@ -24,11 +24,11 @@ for %%o in (%goos%) do (
                   if %%a==amd64 (
                         set output_file=!output_file!.exe
                         echo 正在编译 !output_file!...
-                        go build -v -o !output_file!
+                        go build -o !output_file! > nul
                   )
             ) else (
                   echo 正在编译 !output_file!...
-                  go build -v -o !output_file!
+                  go build -o !output_file! > nul
             ) 
       )
 )
