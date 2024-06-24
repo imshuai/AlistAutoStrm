@@ -1,17 +1,12 @@
 package main
 
 type Config struct {
-	Database           string   `json:"database" yaml:"database"`
-	Endpoint           string   `json:"endpoint" yaml:"endpoint"`
-	Username           string   `json:"username" yaml:"username"`
-	Password           string   `json:"password" yaml:"password"`
-	InscureTLSVerify   bool     `json:"inscure-tls-verify" yaml:"inscure-tls-verify"`
-	Loglevel           string   `json:"loglevel" yaml:"loglevel"`
-	Timeout            int      `json:"timeout" yaml:"timeout"`
-	Dirs               []Dir    `json:"dirs" yaml:"dirs"`
-	Exts               []string `json:"exts" yaml:"exts"`
-	CreateSubDirectory bool     `json:"create-sub-directory" yaml:"create-sub-directory"`
-	MaxConnections     int      `json:"max-connections" yaml:"max-connections"`
+	Database           string     `json:"database" yaml:"database"`
+	Endpoints          []Endpoint `json:"endpoints" yaml:"endpoints"`
+	Loglevel           string     `json:"loglevel" yaml:"loglevel"`
+	Timeout            int        `json:"timeout" yaml:"timeout"`
+	Exts               []string   `json:"exts" yaml:"exts"`
+	CreateSubDirectory bool       `json:"create-sub-directory" yaml:"create-sub-directory"`
 }
 
 type Dir struct {
@@ -21,4 +16,14 @@ type Dir struct {
 	CreateSubDirectory bool     `json:"create-sub-directory" yaml:"create-sub-directory"`
 	Disabled           bool     `json:"disabled" yaml:"disabled"`
 	ForceRefresh       bool     `json:"force-refresh" yaml:"force-refresh"`
+}
+
+type Endpoint struct {
+	BaseURL string `json:"base-url" yaml:"base-url"`
+	//Token            string `json:"token" yaml:"token"`
+	Username         string `json:"username" yaml:"username"`
+	Password         string `json:"password" yaml:"password"`
+	InscureTLSVerify bool   `json:"inscure-tls-verify" yaml:"inscure-tls-verify"`
+	Dirs             []Dir  `json:"dirs" yaml:"dirs"`
+	MaxConnections   int    `json:"max-connections" yaml:"max-connections"`
 }

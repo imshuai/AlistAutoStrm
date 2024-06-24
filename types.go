@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/md5"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,7 +20,13 @@ type Strm struct {
 }
 
 func (s Strm) Key() string {
-	byts := md5.Sum([]byte(s.RawURL))
+	// 使用各算法计算key
+	// md5.Sum([]byte(s.RawURL))
+	// sha1.Sum([]byte(s.RawURL))
+	// sha256.Sum256([]byte(s.RawURL))
+	// sha512.Sum512([]byte(s.RawURL))
+	//
+	byts := sha1.Sum([]byte(s.RawURL))
 	return fmt.Sprintf("%x", byts)
 }
 
@@ -56,8 +62,7 @@ func GetStrm(rawUrl string) (*Strm, error) {
 	//TODO 使用boltdb实现根据key获取Strm对象的逻辑
 	var strm Strm
 
-	// 计算key
-	key := fmt.Sprintf("%x", md5.Sum([]byte(rawUrl)))
+	strm.RawURL = rawUrl
 
 	err := db.View(func(tx *bolt.Tx) error {
 		// 获取名为strm的bucket
@@ -67,7 +72,7 @@ func GetStrm(rawUrl string) (*Strm, error) {
 			return fmt.Errorf("bucket not found")
 		}
 		// 根据key获取value
-		v := b.Get([]byte(key))
+		v := b.Get([]byte(strm.Key()))
 		if v == nil {
 			// 如果key不存在，返回错误
 			return fmt.Errorf("key not found")

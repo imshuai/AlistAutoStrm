@@ -79,56 +79,62 @@ func main() {
 		}
 
 		//输出配置文件调试信息
-		logger.Debugf("endpoint: %s", config.Endpoint)
-		logger.Debugf("username: %s", config.Username)
-		logger.Debugf("password: %s", config.Password)
-		logger.Debugf("inscure tls verify: %t", config.InscureTLSVerify)
+		for _, endpoint := range config.Endpoints {
+			logger.Debugf("base url: %s", endpoint.BaseURL)
+			//logger.Debugf("token: %s", endpoint.Token)
+			logger.Debugf("username: %s", endpoint.Username)
+			logger.Debugf("password: %s", endpoint.Password)
+			logger.Debugf("inscure tls verify: %t", endpoint.InscureTLSVerify)
+			logger.Debugf("dirs: %+v", endpoint.Dirs)
+			logger.Debugf("max connections: %d", endpoint.MaxConnections)
+			logger.Debug("\n")
+		}
 		logger.Debugf("timeout: %d", config.Timeout)
 		logger.Debugf("create sub directory: %t", config.CreateSubDirectory)
 		logger.Debugf("exts: %+v", config.Exts)
-		logger.Debugf("dirs: %+v", config.Dirs)
 
-		//初始化ALIST Client
-		client := sdk.NewClient(config.Endpoint, config.Username, config.Password, config.InscureTLSVerify, config.Timeout)
-		u, err := client.Login()
-		if err != nil {
-			return errors.New("login error: " + err.Error())
-		}
-		logger.Info("login success, username:", u.Username)
+		for _, endpoint := range config.Endpoints {
+			//开始按配置文件遍历远程目录
+			logger.Infof("start to get files from: %s", endpoint.BaseURL)
 
-		//开始按配置文件遍历远程目录
-		for _, dir := range config.Dirs {
-			if dir.Disabled {
-				logger.Infof("dir [%s] is disabled, ignore", dir.LocalDirectory)
+			//初始化ALIST Client
+			client := sdk.NewClient(endpoint.BaseURL, endpoint.Username, endpoint.Password, endpoint.InscureTLSVerify, config.Timeout)
+			u, err := client.Login()
+			if err != nil {
+				logger.Errorf("login error: %s", err.Error())
 				continue
 			}
-
-			//TODO 遍历本地目录中已有文件内容，生成hash表，判断本地文件是否需要更新
-
-			logger.Infoln("start generate .strm file to", dir.LocalDirectory)
-			logger.Debugln("create local directory", dir.LocalDirectory)
-			err := os.MkdirAll(dir.LocalDirectory, 0666)
-			if err != nil {
-				return errors.New("create local directory error: " + err.Error())
-			}
-			for _, rDir := range dir.RemoteDirectories {
-				logger.Infof("start get files from %s%s", rDir, func() string {
-					if dir.NotRescursive {
-						return ""
-					} else {
-						return " recursively"
-					}
-				}())
-				m := &Mission{
-					CurrentRemotePath:    rDir,
-					LocalPath:            dir.LocalDirectory,
-					Exts:                 config.Exts,
-					IsCreateSubDirectory: config.CreateSubDirectory || dir.CreateSubDirectory,
-					IsRecursive:          !dir.NotRescursive,
-					IsForceRefresh:       dir.ForceRefresh,
-					client:               client,
+			logger.Info("login success, username:", u.Username)
+			for _, dir := range endpoint.Dirs {
+				if dir.Disabled {
+					logger.Infof("dir [%s] is disabled", dir.LocalDirectory)
+					continue
 				}
-				m.Run(config.MaxConnections)
+				logger.Debug("create local directory", dir.LocalDirectory)
+				err := os.MkdirAll(dir.LocalDirectory, 0666)
+				if err != nil {
+					logger.Errorf("create local directory %s error: %s", dir.LocalDirectory, err.Error())
+					continue
+				}
+				for _, remoteDir := range dir.RemoteDirectories {
+					logger.Infof("start get files from %s%s", remoteDir, func() string {
+						if dir.NotRescursive {
+							return ""
+						} else {
+							return " recursively"
+						}
+					}())
+					m := &Mission{
+						CurrentRemotePath:    remoteDir,
+						LocalPath:            dir.LocalDirectory,
+						Exts:                 config.Exts,
+						IsCreateSubDirectory: config.CreateSubDirectory || dir.CreateSubDirectory,
+						IsRecursive:          !dir.NotRescursive,
+						IsForceRefresh:       dir.ForceRefresh,
+						client:               client,
+					}
+					m.Run(endpoint.MaxConnections)
+				}
 			}
 		}
 		logger.Infoln("generate all strm file done, exit")

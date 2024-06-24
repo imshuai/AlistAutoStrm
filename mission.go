@@ -12,26 +12,27 @@ import (
 type Mission struct {
 	CurrentRemotePath    string
 	LocalPath            string
+	BaseURL              string
 	Exts                 []string
 	IsCreateSubDirectory bool
 	IsRecursive          bool
 	IsForceRefresh       bool
 	client               *sdk.Client
 	wg                   *sync.WaitGroup
-	concurrentChan       chan struct{}
+	concurrentChan       chan int
 }
 
 // Walk walks the current remote path
 func (m *Mission) walk() {
-	m.concurrentChan <- struct{}{}
+	idx := <-m.concurrentChan
 	defer func() {
-		<-m.concurrentChan
+		m.concurrentChan <- idx
 		m.wg.Done()
 	}()
-	logger.Debugf("GetFiles from: %s, recursively: %t, include exts: %v", m.CurrentRemotePath, m.IsRecursive, m.Exts)
+	logger.Debugf("[thread %2d]: get files from: %s, recursively: %t, include exts: %v", idx, m.CurrentRemotePath, m.IsRecursive, m.Exts)
 	alistFiles, err := m.client.List(m.CurrentRemotePath, "", 1, 0, m.IsForceRefresh)
 	if err != nil {
-		logger.Errorf("get files from [%s] error: %s", m.CurrentRemotePath, err.Error())
+		logger.Errorf("[thread %2d]: get files from [%s] error: %s", idx, m.CurrentRemotePath, err.Error())
 	}
 	for _, f := range alistFiles {
 		if f.IsDir && m.IsRecursive {
@@ -56,7 +57,7 @@ func (m *Mission) walk() {
 			go mm.walk()
 		} else if !f.IsDir {
 			if checkExt(f.Name, m.Exts) {
-				logger.Debugf("bind file [%s] to local dir [%s]", f.Name, m.LocalPath)
+				logger.Debugf("[thread %2d]: bind file [%s] to local dir [%s]", idx, f.Name, m.LocalPath)
 				strm := Strm{
 					Name: func() string {
 						//change f.Name to Upper letter except the extension and return the name with extension .strm
@@ -67,20 +68,23 @@ func (m *Mission) walk() {
 						return name + ".strm"
 					}(),
 					Dir:    m.LocalPath,
-					RawURL: config.Endpoint + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name),
+					RawURL: m.BaseURL + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name),
 				}
 				err := strm.GenStrm()
 				if err != nil {
-					logger.Errorf("save file [%s] error: %s", m.CurrentRemotePath+"/"+f.Name, err.Error())
+					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}
-				logger.Infof("generate [%s] ==> [%s] success", strm.Dir+"/"+strm.Name, strm.RawURL)
+				logger.Infof("[thread %2d]: generate [%s] ==> [%s] success", idx, strm.Dir+"/"+strm.Name, strm.RawURL)
 			}
 		}
 	}
 }
 
 func (m *Mission) Run(concurrentNum int) {
-	m.concurrentChan = make(chan struct{}, concurrentNum)
+	m.concurrentChan = make(chan int, concurrentNum)
+	for i := 0; i < concurrentNum; i++ {
+		m.concurrentChan <- i
+	}
 	m.wg = &sync.WaitGroup{}
 	m.wg.Add(1)
 	go m.walk()

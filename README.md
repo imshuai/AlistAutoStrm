@@ -30,57 +30,57 @@ D:\AlistAutoStrm\bin>ass_windows_amd64.exe --config config.json
 ### JSON format JSON格式
 ```json
 {
-   "database": "strm.db",
-    "endpoint": "https://alist.cn",
-    "username": "",
-    "password": "",
-    "inscure-tls-verify": false,
-    "loglevel": "info",
-    "timeout": 30,
-    "dirs": [
-        {
-            "remote-directories": [
-               "/"
-            ],
-            "local-directory": "path_to_local_directory",
-            "disabled":false,
-            "force-refresh":false,
-            "not-recursive":false,
-            "create-sub-directory":false
-        }
-    ],
-    "exts": [
-        ".mp4",
-        ".mkv",
-        ".avi"
-    ],
-    "create-sub-directory": false,
-    "max-connections": 10
+      "database": "strm.db",
+      "loglevel": "info",
+      "timeout": 30,
+      "create-sub-directory": true,
+      "exts":[".mp4",".mkv",".avi",".rmvb"],
+      "endpoints": [
+            {
+                  "base-url": "https://alist.cn",
+                  "username": "test",
+                  "password": "test",
+                  "inscure-tls-verify": false,
+                  "dirs": [
+                        {
+                              "local-directory": "data/movie",
+                              "remote-directories": [
+                                    "/path/to/movie",
+                                    "/path/to/movie2"
+                              ],
+                              "create-sub-directory":true,
+                              "not-recursive":false,
+                              "force-refresh":false,
+                              "disabled":true
+                        }
+                  ],
+                  "max-connections": 10
+            }
+      ]
 }
 ```
 ### YAML format YAML格式  
 ```yaml
-database: strm.db
-endpoint: https://alist.cn
-username: ""
-password: ""
-inscure-tls-verify: false
-loglevel: info
+database: "strm.db"
+loglevel: "info"
 timeout: 30
-dirs:
-  - remote-directories: 
-      - /
-    local-directory: path_to_local_directory
-    disabled: false
-    force-refresh: false
-    not-recursive: false
-    create-sub-directory: false
+create-sub-directory: true
 exts:
-  - .mp4
-  - .mkv
-  - .avi
-create-sub-directory: false
-max-connections: 10
+  - ".mp4"
+  - ".mkv"
+  - ".avi"
+  - ".rmvb"
+endpoints:
+  - base-url: "https://alist.cn"
+    username: "test"
+    password: "test"
+    inscure-tls-verify: false
+    dirs:
+      - local-directory: "data/movie"
+        remote-directories:
+          - "/path/to/movie"
+          - "/path/to/movie2"
+        create-sub-directory: true
 ```
 ### Tips 提示  
 #### `create-sub-directory`
