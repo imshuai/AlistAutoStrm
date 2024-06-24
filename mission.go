@@ -76,14 +76,14 @@ func (m *Mission) walk() {
 				if err != nil {
 					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}
-				logger.Infof("[thread %2d]: generate [%s] ==> [%s] success", idx, strm.Dir+"/"+strm.Name, strm.RawURL)
+				logger.Debugf("[thread %2d]: generate [%s] ==> [%s] success", idx, strm.Dir+"/"+strm.Name, strm.RawURL)
 			}
 		}
 	}
 }
 
 func (m *Mission) Run(concurrentNum int) {
-	logger.Debugf("[MAIN]: Run mission with concurrent number: %d", concurrentNum)
+	logger.Infof("[MAIN]: Run mission with concurrent number: %d", concurrentNum)
 	m.concurrentChan = make(chan int, concurrentNum)
 	for i := 0; i < concurrentNum; i++ {
 		logger.Debugf("[MAIN]: Push thread %d to concurrent channel", i)
@@ -92,7 +92,7 @@ func (m *Mission) Run(concurrentNum int) {
 	m.wg = &sync.WaitGroup{}
 	m.wg.Add(1)
 	go m.walk()
-	logger.Debugf("[MAIN]: Wait for walk to finish")
+	logger.Info("[MAIN]: Wait for walk to finish")
 	m.wg.Wait()
-	logger.Debugf("[MAIN]: All threads finished")
+	logger.Info("[MAIN]: All threads finished")
 }

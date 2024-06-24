@@ -120,6 +120,7 @@ func main() {
 					continue
 				}
 				for _, remoteDir := range dir.RemoteDirectories {
+					logger.Infof("start to generate strm file from remote directory: %s", remoteDir)
 					m := &Mission{
 						CurrentRemotePath:    remoteDir,
 						LocalPath:            dir.LocalDirectory,
