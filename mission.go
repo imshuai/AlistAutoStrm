@@ -33,9 +33,11 @@ func (m *Mission) walk() {
 	alistFiles, err := m.client.List(m.CurrentRemotePath, "", 1, 0, m.IsForceRefresh)
 	if err != nil {
 		logger.Errorf("[thread %2d]: get files from [%s] error: %s", idx, m.CurrentRemotePath, err.Error())
+		return
 	}
 	for _, f := range alistFiles {
 		if f.IsDir && m.IsRecursive {
+			logger.Debugf("[thread %2d]: found sub directory [%s]", idx, f.Name)
 			mm := &Mission{
 				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
 				LocalPath: func() string {
@@ -81,12 +83,16 @@ func (m *Mission) walk() {
 }
 
 func (m *Mission) Run(concurrentNum int) {
+	logger.Debugf("[MAIN]: Run mission with concurrent number: %d", concurrentNum)
 	m.concurrentChan = make(chan int, concurrentNum)
 	for i := 0; i < concurrentNum; i++ {
+		logger.Debugf("[MAIN]: Push thread %d to concurrent channel", i)
 		m.concurrentChan <- i
 	}
 	m.wg = &sync.WaitGroup{}
 	m.wg.Add(1)
 	go m.walk()
+	logger.Debugf("[MAIN]: Wait for walk to finish")
 	m.wg.Wait()
+	logger.Debugf("[MAIN]: All threads finished")
 }

@@ -19,9 +19,8 @@ var (
 func main() {
 	//初始化日志模块
 	logger = logrus.New()
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
+	logger.SetFormatter(&Formatter{
+		Colored: false,
 	})
 
 	//初始化并设置app实例
@@ -58,15 +57,20 @@ func main() {
 				return errors.New("unmarshal yaml type config file error: " + err.Error())
 			}
 		}
+		if config.ColoredLog {
+			logger.SetFormatter(&Formatter{
+				Colored: true,
+			})
+			logger.Info("use colored log")
+		}
 		logger.Info("read config file success")
-
 		logger.Infof("set log level: %s", config.Loglevel)
 		switch config.Loglevel {
 		case "debug", "DEBUG":
 			logger.SetLevel(logrus.DebugLevel)
 		case "info", "INFO":
 			logger.SetLevel(logrus.InfoLevel)
-		case "warn", "WARN":
+		case "warn", "warning", "WARN":
 			logger.SetLevel(logrus.WarnLevel)
 		case "error", "ERROR":
 			logger.SetLevel(logrus.ErrorLevel)
@@ -87,7 +91,6 @@ func main() {
 			logger.Debugf("inscure tls verify: %t", endpoint.InscureTLSVerify)
 			logger.Debugf("dirs: %+v", endpoint.Dirs)
 			logger.Debugf("max connections: %d", endpoint.MaxConnections)
-			logger.Debug("\n")
 		}
 		logger.Debugf("timeout: %d", config.Timeout)
 		logger.Debugf("create sub directory: %t", config.CreateSubDirectory)
@@ -95,7 +98,7 @@ func main() {
 
 		for _, endpoint := range config.Endpoints {
 			//开始按配置文件遍历远程目录
-			logger.Infof("start to get files from: %s", endpoint.BaseURL)
+			logger.Debugf("start to get files from: %s", endpoint.BaseURL)
 
 			//初始化ALIST Client
 			client := sdk.NewClient(endpoint.BaseURL, endpoint.Username, endpoint.Password, endpoint.InscureTLSVerify, config.Timeout)
@@ -104,7 +107,7 @@ func main() {
 				logger.Errorf("login error: %s", err.Error())
 				continue
 			}
-			logger.Info("login success, username:", u.Username)
+			logger.Infof("%s login success, username: %s", endpoint.BaseURL, u.Username)
 			for _, dir := range endpoint.Dirs {
 				if dir.Disabled {
 					logger.Infof("dir [%s] is disabled", dir.LocalDirectory)
@@ -117,13 +120,6 @@ func main() {
 					continue
 				}
 				for _, remoteDir := range dir.RemoteDirectories {
-					logger.Infof("start get files from %s%s", remoteDir, func() string {
-						if dir.NotRescursive {
-							return ""
-						} else {
-							return " recursively"
-						}
-					}())
 					m := &Mission{
 						CurrentRemotePath:    remoteDir,
 						LocalPath:            dir.LocalDirectory,
@@ -137,7 +133,7 @@ func main() {
 				}
 			}
 		}
-		logger.Infoln("generate all strm file done, exit")
+		logger.Info("generate all strm file done, exit")
 		return nil
 	}
 	e := app.Run(os.Args)

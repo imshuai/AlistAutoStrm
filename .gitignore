@@ -1,4 +1,4 @@
 bin/*
 data/*
 config.json
-__debug_bin.exe
+*.exe

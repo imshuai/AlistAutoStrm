@@ -4,6 +4,7 @@ type Config struct {
 	Database           string     `json:"database" yaml:"database"`
 	Endpoints          []Endpoint `json:"endpoints" yaml:"endpoints"`
 	Loglevel           string     `json:"loglevel" yaml:"loglevel"`
+	ColoredLog         bool       `json:"colored-log" yaml:"colored-log"`
 	Timeout            int        `json:"timeout" yaml:"timeout"`
 	Exts               []string   `json:"exts" yaml:"exts"`
 	CreateSubDirectory bool       `json:"create-sub-directory" yaml:"create-sub-directory"`
