@@ -77,6 +77,7 @@ func (m *Mission) walk() {
 					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}
 				logger.Debugf("[thread %2d]: generate [%s] ==> [%s] success", idx, strm.Dir+"/"+strm.Name, strm.RawURL)
+				logger.Add(1)
 			}
 		}
 	}

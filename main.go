@@ -3,32 +3,53 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
 	sdk "github.com/imshuai/alistsdk-go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	// 定义常量
+	NAME        = "AlistAutoStrm"
+	DESCRIPTION = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
+	VERSION     = "1.1.0"
+)
+
 var (
-	logger *logrus.Logger
+	logger *StatLogger
 	config Config
 )
 
 func main() {
+	// 隐藏光标
+	fmt.Print("\033[?25l")
+	// 程序退出时显示光标
+	defer func() {
+		fmt.Print("\033[?25h")
+	}()
+
+	// 初始化一个mpb.Progress实例
+	p := mpb.New(mpb.WithAutoRefresh())
+
 	//初始化日志模块
-	logger = logrus.New()
+	logger = NewLogger()
 	logger.SetFormatter(&Formatter{
 		Colored: false,
 	})
+	logger.SetOutput(p)
 
 	//初始化并设置app实例
 	app := cli.NewApp()
-	app.Name = "AlistAutoStrm"
-	app.Description = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
-	app.Usage = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
-	app.Version = "1.1.0"
+	app.Name = NAME
+	app.Description = DESCRIPTION
+	app.Usage = DESCRIPTION
+	app.Version = VERSION
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    "config",
@@ -63,6 +84,22 @@ func main() {
 			})
 			logger.Info("use colored log")
 		}
+		bar := p.AddBar(0,
+			mpb.PrependDecorators(
+				decor.Any(
+					func(s decor.Statistics) string {
+						return fmt.Sprintf("%s [%7s] Get % 5d files [% 3d/%3d]", NAME, logger.Level.String(), logger.GetCount(), s.Current, s.Total)
+					},
+					decor.WC{W: 1, C: decor.DSyncWidthR},
+				),
+			),
+			mpb.AppendDecorators(
+				decor.Elapsed(decor.ET_STYLE_GO, decor.WC{C: decor.DSyncSpace}),
+			),
+		)
+		// 设置logger的bar
+		logger.SetBar(bar)
+
 		logger.Info("read config file success")
 		logger.Infof("set log level: %s", config.Loglevel)
 		switch config.Loglevel {
@@ -109,6 +146,7 @@ func main() {
 			}
 			logger.Infof("%s login success, username: %s", endpoint.BaseURL, u.Username)
 			for _, dir := range endpoint.Dirs {
+				logger.SetTotal(int64(len(dir.RemoteDirectories)) + logger.GetCurrent())
 				if dir.Disabled {
 					logger.Infof("dir [%s] is disabled", dir.LocalDirectory)
 					continue
@@ -131,10 +169,12 @@ func main() {
 						client:               client,
 					}
 					m.Run(endpoint.MaxConnections)
+					logger.Increment()
 				}
 			}
 		}
 		logger.Info("generate all strm file done, exit")
+		p.Wait()
 		return nil
 	}
 	e := app.Run(os.Args)

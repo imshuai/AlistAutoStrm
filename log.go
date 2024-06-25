@@ -3,9 +3,107 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/sirupsen/logrus"
+	"github.com/vbauerster/mpb/v8"
 )
+
+type StatLogger struct {
+	*logrus.Logger // 内部使用logrus库
+	count          *atomic.Int64
+	bar            *mpb.Bar
+}
+
+func NewLogger() *StatLogger {
+	l := &StatLogger{
+		logrus.New(),
+		&atomic.Int64{},
+		&mpb.Bar{},
+	}
+	l.count.Store(0)
+	return l
+}
+
+func (l *StatLogger) SetBar(bar *mpb.Bar) {
+	l.bar = bar
+}
+
+func (l *StatLogger) Increment() {
+	l.bar.Increment()
+}
+
+func (l *StatLogger) SetTotal(total int64) {
+	l.bar.SetTotal(total, false)
+}
+
+func (l *StatLogger) SetCurrent(current int64) {
+	l.bar.SetCurrent(current)
+}
+
+func (l *StatLogger) GetCurrent() int64 {
+	return l.bar.Current()
+}
+
+func (l *StatLogger) Add(n int64) {
+	l.count.Add(n)
+}
+
+func (l *StatLogger) GetCount() int64 {
+	return l.count.Load()
+}
+
+// func (l *Logger) SetFormatter(f logrus.Formatter) {
+// 	l.l.SetFormatter(f)
+// }
+
+// func (l *Logger) Trace(args ...interface{}) {
+//     l.l.Trace(args...)
+// }
+
+// func (l *Logger) Tracef(format string, args ...interface{}) {
+//     l.l.Tracef(format, args...)
+// }
+
+// func (l *Logger) Debug(args ...interface{}) {
+//     l.l.Debug(args...)
+// }
+
+// func (l *Logger) Debugf(format string, args ...interface{}) {
+//     l.l.Debugf(format, args...)
+// }
+
+// func (l *Logger) Info(args ...interface{}) {
+//     l.l.Info(args...)
+// }
+
+// func (l *Logger) Infof(format string, args ...interface{}) {
+//     l.l.Infof(format, args...)
+// }
+
+// func (l *Logger) Warn(args ...interface{}) {
+//     l.l.Warn(args...)
+// }
+
+// func (l *Logger) Warnf(format string, args ...interface{}) {
+//     l.l.Warnf(format, args...)
+// }
+
+// func (l *Logger) Error(args ...interface{}) {
+//     l.l.Error(args...)
+// }
+
+// func (l *Logger) Errorf(format string, args ...interface{}) {
+//     l.l.Errorf(format, args...)
+// }
+
+// func (l *Logger) Fatal(args ...interface{}) {
+//     l.l.Fatal(args...)
+// }
+
+// func (l *Logger) Fatalf(format string, args ...interface{}) {
+//     l.l.Fatalf(format, args...)
+// }
 
 // Formatter is a custom logrus formatter that formats log entries.
 type Formatter struct {
