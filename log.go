@@ -15,6 +15,7 @@ type StatLogger struct {
 	bar            *mpb.Bar
 }
 
+// NewLogger 创建一个新的StatLogger
 func NewLogger() *StatLogger {
 	l := &StatLogger{
 		logrus.New(),
@@ -25,85 +26,44 @@ func NewLogger() *StatLogger {
 	return l
 }
 
+// SetBar 设置StatLogger的bar
 func (l *StatLogger) SetBar(bar *mpb.Bar) {
 	l.bar = bar
 }
 
+func (l *StatLogger) FinishBar() {
+	l.bar.SetTotal(-1, true)
+}
+
+// Increment 增加StatLogger的bar
 func (l *StatLogger) Increment() {
 	l.bar.Increment()
 }
 
+// SetTotal 设置StatLogger的bar的总数
 func (l *StatLogger) SetTotal(total int64) {
 	l.bar.SetTotal(total, false)
 }
 
+// SetCurrent 设置StatLogger的bar的当前进度
 func (l *StatLogger) SetCurrent(current int64) {
 	l.bar.SetCurrent(current)
 }
 
+// GetCurrent 获取StatLogger的bar的当前进度
 func (l *StatLogger) GetCurrent() int64 {
 	return l.bar.Current()
 }
 
+// Add 增加StatLogger的计数
 func (l *StatLogger) Add(n int64) {
 	l.count.Add(n)
 }
 
+// GetCount 获取StatLogger的计数
 func (l *StatLogger) GetCount() int64 {
 	return l.count.Load()
 }
-
-// func (l *Logger) SetFormatter(f logrus.Formatter) {
-// 	l.l.SetFormatter(f)
-// }
-
-// func (l *Logger) Trace(args ...interface{}) {
-//     l.l.Trace(args...)
-// }
-
-// func (l *Logger) Tracef(format string, args ...interface{}) {
-//     l.l.Tracef(format, args...)
-// }
-
-// func (l *Logger) Debug(args ...interface{}) {
-//     l.l.Debug(args...)
-// }
-
-// func (l *Logger) Debugf(format string, args ...interface{}) {
-//     l.l.Debugf(format, args...)
-// }
-
-// func (l *Logger) Info(args ...interface{}) {
-//     l.l.Info(args...)
-// }
-
-// func (l *Logger) Infof(format string, args ...interface{}) {
-//     l.l.Infof(format, args...)
-// }
-
-// func (l *Logger) Warn(args ...interface{}) {
-//     l.l.Warn(args...)
-// }
-
-// func (l *Logger) Warnf(format string, args ...interface{}) {
-//     l.l.Warnf(format, args...)
-// }
-
-// func (l *Logger) Error(args ...interface{}) {
-//     l.l.Error(args...)
-// }
-
-// func (l *Logger) Errorf(format string, args ...interface{}) {
-//     l.l.Errorf(format, args...)
-// }
-
-// func (l *Logger) Fatal(args ...interface{}) {
-//     l.l.Fatal(args...)
-// }
-
-// func (l *Logger) Fatalf(format string, args ...interface{}) {
-//     l.l.Fatalf(format, args...)
-// }
 
 // Formatter is a custom logrus formatter that formats log entries.
 type Formatter struct {
