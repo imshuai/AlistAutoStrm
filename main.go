@@ -1,17 +1,12 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
 	sdk "github.com/imshuai/alistsdk-go"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/vbauerster/mpb/v8"
-	"github.com/vbauerster/mpb/v8/decor"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -23,7 +18,7 @@ const (
 
 var (
 	logger *StatLogger
-	config Config
+	config *Config
 )
 
 func main() {
@@ -65,26 +60,10 @@ func main() {
 			Name:  "fresh-all",
 			Usage: "generate all strm files from alist server, whatever the file has been generated or not",
 			Action: func(c *cli.Context) error {
-				//读取config参数值，并判断传入的是json格式还是yaml格式，再分别使用对应的解析工具解析出Config结构体
-				configFile := c.String("config")
-				configData, err := os.ReadFile(configFile)
+				//从命令行参数读取配置文件信息
+				err := loadConfig(c)
 				if err != nil {
-					return errors.New("read config file error: " + err.Error())
-				}
-				config = Config{}
-				//判断传入的是json格式还是yaml格式
-				if configFile[len(configFile)-5:] == ".json" {
-					//json格式
-					err = json.Unmarshal(configData, &config)
-					if err != nil {
-						return errors.New("unmarshal json type config file error: " + err.Error())
-					}
-				} else {
-					//yaml格式
-					err = yaml.Unmarshal(configData, &config)
-					if err != nil {
-						return errors.New("unmarshal yaml type config file error: " + err.Error())
-					}
+					return err
 				}
 				//判断是否使用彩色日志
 				if config.ColoredLog {
@@ -94,42 +73,14 @@ func main() {
 					logger.Info("use colored log")
 				}
 				//添加进度条
-				bar := p.AddBar(0,
-					//设置进度条前缀
-					mpb.PrependDecorators(
-						decor.Any(
-							func(s decor.Statistics) string {
-								return fmt.Sprintf("%s [%7s] Get % 5d files [% 3d/%3d]", NAME, logger.Level.String(), logger.GetCount(), s.Current, s.Total)
-							},
-							decor.WC{W: 1, C: decor.DSyncWidthR},
-						),
-					),
-					//设置进度条后缀
-					mpb.AppendDecorators(
-						decor.Elapsed(decor.ET_STYLE_GO, decor.WC{C: decor.DSyncSpace}),
-					),
-				)
+				bar := statusBar(p)
 				// 设置logger的bar
 				logger.SetBar(bar)
 
 				logger.Info("read config file success")
 				logger.Infof("set log level: %s", config.Loglevel)
-				switch config.Loglevel {
-				case "debug", "DEBUG":
-					logger.SetLevel(logrus.DebugLevel)
-				case "info", "INFO":
-					logger.SetLevel(logrus.InfoLevel)
-				case "warn", "warning", "WARN":
-					logger.SetLevel(logrus.WarnLevel)
-				case "error", "ERROR":
-					logger.SetLevel(logrus.ErrorLevel)
-				case "fatal", "FATAL":
-					logger.SetLevel(logrus.FatalLevel)
-				case "panic", "PANIC":
-					logger.SetLevel(logrus.PanicLevel)
-				default:
-					logger.SetLevel(logrus.InfoLevel)
-				}
+				// 设置日志等级
+				setLogLevel()
 
 				//输出配置文件调试信息
 				for _, endpoint := range config.Endpoints {
@@ -204,6 +155,50 @@ func main() {
 				logger.FinishBar()
 				logger.Info("generate all strm file done, exit")
 				p.Wait()
+				return nil
+			},
+		},
+		{
+			Name:  "update",
+			Usage: "update strm file with choosed mode",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "mode",
+					Usage: "update mode, support: local, remote. when strm content is same but filename changed, local: keep local filename, remote: rename local filename to remote filename",
+					Value: "local",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				//TODO 实现strm文件更新功能
+				return nil
+			},
+		},
+		{
+			Name:  "check",
+			Usage: "check if strm file is valid",
+			Flags: []cli.Flag{
+				//添加valid, invalid 两个选项，用于设置对应的数据保存路径
+				&cli.StringFlag{
+					Name:  "valid",
+					Usage: "valid strm list path",
+					Value: "valid.csv",
+				},
+				&cli.StringFlag{
+					Name:  "invalid",
+					Usage: "invalid strm list path",
+					Value: "invalid.csv",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				//TODO 实现strm文件有效性校验功能
+				return nil
+			},
+		},
+		{
+			Name:  "version",
+			Usage: "show version",
+			Action: func(c *cli.Context) error {
+				fmt.Println("version: " + VERSION)
 				return nil
 			},
 		},
