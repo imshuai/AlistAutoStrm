@@ -217,8 +217,7 @@ func main() {
 					//TODO 实现远程更新模式
 					break
 				default:
-					logger.Errorf("invalid update mode: %s", mode)
-					return nil
+					return fmt.Errorf("invalid update mode: %s", mode)
 				}
 				return nil
 			},
