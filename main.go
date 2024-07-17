@@ -170,6 +170,56 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				//TODO 实现strm文件更新功能
+				//从命令行参数读取配置文件信息
+				err := loadConfig(c)
+				if err != nil {
+					return err
+				}
+				//判断是否使用彩色日志
+				if config.ColoredLog {
+					logger.SetFormatter(&Formatter{
+						Colored: true,
+					})
+					logger.Info("use colored log")
+				}
+				//添加进度条
+				bar := statusBar(p)
+				// 设置logger的bar
+				logger.SetBar(bar)
+
+				logger.Info("read config file success")
+				logger.Infof("set log level: %s", config.Loglevel)
+				// 设置日志等级
+				setLogLevel()
+
+				//输出配置文件调试信息
+				for _, endpoint := range config.Endpoints {
+					logger.Debugf("base url: %s", endpoint.BaseURL)
+					//logger.Debugf("token: %s", endpoint.Token)
+					logger.Debugf("username: %s", endpoint.Username)
+					logger.Debugf("password: %s", endpoint.Password)
+					logger.Debugf("inscure tls verify: %t", endpoint.InscureTLSVerify)
+					logger.Debugf("dirs: %+v", endpoint.Dirs)
+					logger.Debugf("max connections: %d", endpoint.MaxConnections)
+				}
+				logger.Debugf("timeout: %d", config.Timeout)
+				logger.Debugf("create sub directory: %t", config.CreateSubDirectory)
+				logger.Debugf("exts: %+v", config.Exts)
+
+				mode := c.String("mode")
+				logger.Debugf("update mode: %s", mode)
+
+				switch mode {
+				case "local":
+					//TODO 实现本地更新模式
+					break
+				case "remote":
+					//TODO 实现远程更新模式
+					break
+				default:
+					logger.Errorf("invalid update mode: %s", mode)
+					return nil
+				}
 				return nil
 			},
 		},
