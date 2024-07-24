@@ -156,8 +156,22 @@ func fetchLocalFiles(e Endpoint) []*Strm {
 	// TODO 读取本地已有strm文件
 	strms := make([]*Strm, 0)
 	for _, dir := range e.Dirs {
+		if dir.Disabled {
+			logger.Infof("[MAIN]: dir [%s] is disabled", dir.LocalDirectory)
+			continue
+		}
+
 		// 遍历路径下所有strm文件，包括子目录中
-		files, err := filepath.Glob(filepath.Join(dir.LocalDirectory, "*.strm"))
+		files := make([]string, 0)
+		err := filepath.Walk(dir.LocalDirectory, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() && filepath.Ext(path) == ".strm" {
+				files = append(files, path)
+			}
+			return nil
+		})
 		logger.Debugf("[MAIN]: read local directory %s, find %d strm files", dir.LocalDirectory, len(files))
 		if err != nil {
 			// 读取本地目录出错，记录错误日志
