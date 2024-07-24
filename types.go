@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/boltdb/bolt"
 )
@@ -19,7 +20,7 @@ type Strm struct {
 	RawURL string `json:"raw_url"`
 }
 
-func (s Strm) Key() string {
+func (s *Strm) Key() string {
 	// 使用各算法计算key
 	// md5.Sum([]byte(s.RawURL))
 	// sha1.Sum([]byte(s.RawURL))
@@ -30,12 +31,31 @@ func (s Strm) Key() string {
 	return fmt.Sprintf("%x", byts)
 }
 
-func (s Strm) Value() []byte {
+func (s *Strm) Value() []byte {
 	byts, _ := json.Marshal(s)
 	return byts
 }
 
-func (s Strm) Save() error {
+func (s *Strm) Delete() error {
+	//TODO 使用boltdb实现Strm对象的删除逻辑
+	err := os.RemoveAll(path.Join(s.Dir, s.Name))
+	if err != nil {
+		return err
+	}
+	// return db.Update(func(tx *bolt.Tx) error {
+	// 	// 获取名为strm的bucket
+	// 	b := tx.Bucket([]byte("strm"))
+	// 	if b == nil {
+	// 		// 如果bucket不存在，返回错误
+	// 		return fmt.Errorf("bucket not found")
+	// 	}
+	// 	// 根据key删除value
+	// 	return b.Delete([]byte(s.Key()))
+	// })
+	return nil
+}
+
+func (s *Strm) Save() error {
 	//TODO 使用boltdb实现Strm对象的保存逻辑
 	return db.Update(func(tx *bolt.Tx) error {
 		//创建一个名为"strm"的bucket
@@ -48,14 +68,14 @@ func (s Strm) Save() error {
 	})
 }
 
-func (s Strm) GenStrm() error {
+func (s *Strm) GenStrm() error {
 	//创建s.Dir目录
 	err := os.MkdirAll(s.Dir, 0666)
 	if err != nil {
 		return err
 	}
 	//将s.RawURL写入s.Dir目录下的s.Name文件中
-	return os.WriteFile(s.Dir+"/"+s.Name, []byte(s.RawURL), 0666)
+	return os.WriteFile(path.Join(s.Dir, s.Name), []byte(s.RawURL), 0666)
 }
 
 func GetStrm(rawUrl string) (*Strm, error) {

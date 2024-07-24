@@ -81,6 +81,10 @@ endpoints:
           - "/path/to/movie"
           - "/path/to/movie2"
         create-sub-directory: true
+        not-recursive: false
+        force-refresh: false
+        disabled: false
+    max-connections: 10
 ```
 ### Tips 提示  
 #### `create-sub-directory`

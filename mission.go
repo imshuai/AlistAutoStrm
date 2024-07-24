@@ -1,6 +1,7 @@
 package main
 
 import (
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -43,7 +44,7 @@ func (m *Mission) walk() {
 				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
 				LocalPath: func() string {
 					if m.IsCreateSubDirectory {
-						return m.LocalPath + "/" + f.Name
+						return path.Join(m.LocalPath, f.Name)
 					} else {
 						return m.LocalPath
 					}
@@ -77,7 +78,7 @@ func (m *Mission) walk() {
 				if err != nil {
 					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}
-				logger.Debugf("[thread %2d]: generate [%s] ==> [%s] success", idx, strm.Dir+"/"+strm.Name, strm.RawURL)
+				logger.Debugf("[thread %2d]: generate [%s] ==> [%s] success", idx, path.Join(strm.Dir, strm.Name), strm.RawURL)
 				logger.Add(1)
 			}
 		}
@@ -118,7 +119,7 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
 				LocalPath: func() string {
 					if m.IsCreateSubDirectory {
-						return m.LocalPath + "/" + f.Name
+						return path.Join(m.LocalPath, f.Name)
 					} else {
 						return m.LocalPath
 					}

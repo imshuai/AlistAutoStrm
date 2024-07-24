@@ -208,17 +208,60 @@ func main() {
 
 				mode := c.String("mode")
 				logger.Debugf("update mode: %s", mode)
-
+				localStrms := make(map[string]*Strm, 0)
+				remoteStrms := make(map[string]*Strm, 0)
+				addStrms := make([]*Strm, 0)
+				deleteStrms := make([]*Strm, 0)
 				switch mode {
 				case "local":
 					//TODO 实现本地更新模式
-					break
+					for _, e := range config.Endpoints {
+						for _, v := range fetchLocalFiles(e) {
+							localStrms[v.Key()] = v
+						}
+						for _, v := range fetchRemoteFiles(e) {
+							if _, ok := localStrms[v.Key()]; !ok {
+								addStrms = append(addStrms, v)
+							} else {
+								logger.Infof("remote file %s is same with local file %s, ignored.", localStrms[v.Key()].Name, v.Name)
+							}
+						}
+					}
 				case "remote":
 					//TODO 实现远程更新模式
-					break
+					for _, e := range config.Endpoints {
+						for _, v := range fetchRemoteFiles(e) {
+							remoteStrms[v.Key()] = v
+						}
+						for _, v := range fetchLocalFiles(e) {
+							if _, ok := remoteStrms[v.Key()]; !ok {
+								deleteStrms = append(deleteStrms, v)
+							} else {
+								logger.Infof("local file %s is same with remote file %s, ignored.", remoteStrms[v.Key()].Name, v.Name)
+							}
+						}
+					}
 				default:
 					return fmt.Errorf("invalid update mode: %s", mode)
 				}
+				for _, v := range addStrms {
+					e := v.GenStrm()
+
+					if e != nil {
+						logger.Errorf("gen file %s failed: %s", v.Name, e)
+					}
+
+					logger.Infof("gen file %s success", v.Dir+"/"+v.Name)
+				}
+
+				for _, v := range deleteStrms {
+					e := v.Delete()
+
+					if e != nil {
+						logger.Errorf("delete file %s failed: %s", v.Name, e)
+					}
+				}
+				logger.Infof("add %d files, delete %d files", len(addStrms), len(deleteStrms))
 				return nil
 			},
 		},

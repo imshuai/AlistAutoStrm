@@ -1,16 +1,16 @@
 @echo off
 
-:: 定义输出文件名称
+:: 锟斤拷锟斤拷锟斤拷锟斤拷募锟斤拷锟斤拷锟?
 set output_name=ass
 set CGO_ENABLED=0
 
-:: 交叉编译参数
+:: 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
 set goos=linux windows
 set goarch=386 amd64 arm arm64
 
 setlocal enabledelayedexpansion
 
-:: 开始交叉编译
+:: 锟斤拷始锟斤拷锟斤拷锟斤拷锟?
 for %%o in (%goos%) do (
       for %%a in (%goarch%) do (
             set output_file=bin\%output_name%_%%o_%%a
@@ -34,5 +34,5 @@ for %%o in (%goos%) do (
 )
 endlocal
 
-echo 编译完成
+echo 交叉编译完成
 exit /b 0

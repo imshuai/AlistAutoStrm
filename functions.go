@@ -35,11 +35,6 @@ func urlEncode(s string) string {
 	return strings.Join(vv, "/")
 }
 
-// 替换字符串中的空格为'-'
-func replaceSpaceToDash(s string) string {
-	return strings.ReplaceAll(s, " ", "-")
-}
-
 func loadConfig(c *cli.Context) error {
 	//读取config参数值，并判断传入的是json格式还是yaml格式，再分别使用对应的解析工具解析出Config结构体
 	configFile := c.String("config")
@@ -102,7 +97,7 @@ func setLogLevel() {
 	}
 }
 
-func fetchRemoteFiles(e Endpoint) ([]*Strm, error) {
+func fetchRemoteFiles(e Endpoint) []*Strm {
 	//初始化ALIST Client
 	client := sdk.NewClient(e.BaseURL, e.Username, e.Password, e.InscureTLSVerify, config.Timeout)
 	u, err := client.Login()
@@ -151,7 +146,7 @@ func fetchRemoteFiles(e Endpoint) ([]*Strm, error) {
 			logger.Increment()
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 func fetchLocalFiles(e Endpoint) []*Strm {
