@@ -41,6 +41,7 @@ func (m *Mission) walk() {
 		if f.IsDir && m.IsRecursive {
 			logger.Debugf("[thread %2d]: found sub directory [%s]", idx, f.Name)
 			mm := &Mission{
+				BaseURL:           m.BaseURL,
 				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
 				LocalPath: func() string {
 					if m.IsCreateSubDirectory {
@@ -74,7 +75,7 @@ func (m *Mission) walk() {
 					Dir:    m.LocalPath,
 					RawURL: m.BaseURL + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name),
 				}
-				err := strm.GenStrm()
+				err := strm.GenStrm(true)
 				if err != nil {
 					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}
@@ -86,7 +87,7 @@ func (m *Mission) walk() {
 }
 
 func (m *Mission) Run(concurrentNum int) {
-	logger.Infof("[MAIN]: Run mission with concurrent number: %d", concurrentNum)
+	logger.Infof("[MAIN]: Run mission with %d threads", concurrentNum)
 	m.concurrentChan = make(chan int, concurrentNum)
 	for i := 0; i < concurrentNum; i++ {
 		logger.Debugf("[MAIN]: Push thread %d to concurrent channel", i)
@@ -114,8 +115,9 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 	}
 	for _, f := range alistFiles {
 		if f.IsDir && m.IsRecursive {
-			logger.Debugf("[thread %2d]: found sub directory [%s]", threadIdx, f.Name)
+			logger.Debugf("[thread %2d]: found sub directory [%s]", threadIdx, m.CurrentRemotePath+"/"+f.Name)
 			mm := &Mission{
+				BaseURL:           m.BaseURL,
 				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
 				LocalPath: func() string {
 					if m.IsCreateSubDirectory {
@@ -159,7 +161,7 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 // This function returns a slice of pointers to Strm objects
 func (m *Mission) GetAllStrm(concurrentNum int) []*Strm {
 	// Log the number of concurrent threads
-	logger.Infof("[MAIN]: Run mission with concurrent number: %d", concurrentNum)
+	logger.Infof("[MAIN]: Run mission with %d threads", concurrentNum)
 	// Create a channel for concurrent threads
 	m.concurrentChan = make(chan int, concurrentNum)
 	// Push the threads to the channel

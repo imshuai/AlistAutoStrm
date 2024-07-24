@@ -68,13 +68,18 @@ func (s *Strm) Save() error {
 	})
 }
 
-func (s *Strm) GenStrm() error {
+func (s *Strm) GenStrm(overwrite bool) error {
 	//创建s.Dir目录
 	err := os.MkdirAll(s.Dir, 0666)
 	if err != nil {
 		return err
 	}
-	//将s.RawURL写入s.Dir目录下的s.Name文件中
+	// 如果s.Dir目录下已经存在s.Name文件，并且overwrite为false，则返回错误
+	_, err = os.Stat(path.Join(s.Dir, s.Name))
+	if !overwrite && !os.IsNotExist(err) {
+		return fmt.Errorf("file %s already exists and overwrite is false", path.Join(s.Dir, s.Name))
+	}
+	// 将s.RawURL写入s.Dir目录下的s.Name文件中
 	return os.WriteFile(path.Join(s.Dir, s.Name), []byte(s.RawURL), 0666)
 }
 

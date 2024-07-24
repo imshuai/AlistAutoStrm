@@ -10,15 +10,6 @@ type Config struct {
 	CreateSubDirectory bool       `json:"create-sub-directory" yaml:"create-sub-directory"`
 }
 
-type Dir struct {
-	LocalDirectory     string   `json:"local-directory" yaml:"local-directory"`
-	RemoteDirectories  []string `json:"remote-directories" yaml:"remote-directories"`
-	NotRescursive      bool     `json:"not-recursive" yaml:"not-recursive"`
-	CreateSubDirectory bool     `json:"create-sub-directory" yaml:"create-sub-directory"`
-	Disabled           bool     `json:"disabled" yaml:"disabled"`
-	ForceRefresh       bool     `json:"force-refresh" yaml:"force-refresh"`
-}
-
 type Endpoint struct {
 	BaseURL string `json:"base-url" yaml:"base-url"`
 	//Token            string `json:"token" yaml:"token"`
@@ -27,4 +18,13 @@ type Endpoint struct {
 	InscureTLSVerify bool   `json:"inscure-tls-verify" yaml:"inscure-tls-verify"`
 	Dirs             []Dir  `json:"dirs" yaml:"dirs"`
 	MaxConnections   int    `json:"max-connections" yaml:"max-connections"`
+}
+
+type Dir struct {
+	LocalDirectory     string   `json:"local-directory" yaml:"local-directory"`
+	RemoteDirectories  []string `json:"remote-directories" yaml:"remote-directories"`
+	NotRescursive      bool     `json:"not-recursive" yaml:"not-recursive"`
+	CreateSubDirectory bool     `json:"create-sub-directory" yaml:"create-sub-directory"`
+	Disabled           bool     `json:"disabled" yaml:"disabled"`
+	ForceRefresh       bool     `json:"force-refresh" yaml:"force-refresh"`
 }
