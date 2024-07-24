@@ -172,10 +172,10 @@ func fetchLocalFiles(e Endpoint) []*Strm {
 			}
 			return nil
 		})
-		logger.Debugf("[MAIN]: read local directory %s, find %d strm files", dir.LocalDirectory, len(files))
+		logger.Infof("[MAIN]: read local directory %s, find %d strm files", dir.LocalDirectory, len(files))
 		if err != nil {
 			// 读取本地目录出错，记录错误日志
-			logger.Errorf("[MAIN]: read local directory %s error: %s", dir.LocalDirectory, err.Error())
+			logger.Warnf("[MAIN]: read local directory %s error: %s", dir.LocalDirectory, err.Error())
 			continue
 		}
 		for _, file := range files {
