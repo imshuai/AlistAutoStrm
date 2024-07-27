@@ -80,6 +80,8 @@ func statusBar(p *mpb.Progress) *mpb.Bar {
 
 func setLogLevel() {
 	switch config.Loglevel {
+	case "trace", "TRACE":
+		logger.SetLevel(logrus.TraceLevel)
 	case "debug", "DEBUG":
 		logger.SetLevel(logrus.DebugLevel)
 	case "info", "INFO":
@@ -103,6 +105,7 @@ func fetchRemoteFiles(e Endpoint) []*Strm {
 	u, err := client.Login()
 	if err != nil {
 		logger.Errorf("[MAIN]: login error: %s", err.Error())
+		return nil
 	}
 	logger.Infof("[MAIN]: %s login success, username: %s", e.BaseURL, u.Username)
 	strms := make([]*Strm, 0)
@@ -114,17 +117,10 @@ func fetchRemoteFiles(e Endpoint) []*Strm {
 			logger.Infof("[MAIN]: dir [%s] is disabled", dir.LocalDirectory)
 			continue
 		}
-		// 创建本地目录
-		logger.Debug("[MAIN]: create local directory", dir.LocalDirectory)
-		err := os.MkdirAll(dir.LocalDirectory, 0666)
-		if err != nil {
-			logger.Errorf("[MAIN]: create local directory %s error: %s", dir.LocalDirectory, err.Error())
-			continue
-		}
 		// 遍历dir.RemoteDirectories
 		for _, remoteDir := range dir.RemoteDirectories {
 			// 开始生成strm文件
-			logger.Infof("[MAIN]: start to generate strm file from remote directory: %s", remoteDir)
+			logger.Infof("[MAIN]: fetch strm info from remote directory: %s", remoteDir)
 			m := &Mission{
 				// 服务器地址
 				BaseURL: e.BaseURL,
@@ -181,7 +177,7 @@ func fetchLocalFiles(e Endpoint) []*Strm {
 		for _, file := range files {
 			// 读取strm文件，返回Strm结构体
 			strm := readStrmFile(file)
-			logger.Debugf("[MAIN]: read local strm file %s, url: %s", file, strm.RawURL)
+			logger.Tracef("[MAIN]: read local strm file %s, url: %s", file, strm.RawURL)
 			// 将读取的strm文件添加到strms切片中
 			strms = append(strms, strm)
 		}
@@ -199,7 +195,8 @@ func readStrmFile(file string) *Strm {
 		if err != nil {
 			return ""
 		}
-		return string(byts)
+		//返回的字符串应该有且只有一行，且不会以\n或者\r\n结束
+		return strings.TrimRight(strings.Split(string(byts), "\n")[0], "\r")
 	}()
 	return strm
 }

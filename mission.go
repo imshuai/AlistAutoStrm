@@ -31,7 +31,7 @@ func (m *Mission) walk() {
 		m.concurrentChan <- idx
 		m.wg.Done()
 	}()
-	logger.Debugf("[thread %2d]: get files from: %s, recursively: %t, include exts: %v", idx, m.CurrentRemotePath, m.IsRecursive, m.Exts)
+	logger.Tracef("[thread %2d]: get files from: %s, recursively: %t, include exts: %v", idx, m.CurrentRemotePath, m.IsRecursive, m.Exts)
 	alistFiles, err := m.client.List(m.CurrentRemotePath, "", 1, 0, m.IsForceRefresh)
 	if err != nil {
 		logger.Errorf("[thread %2d]: get files from [%s] error: %s", idx, m.CurrentRemotePath, err.Error())
@@ -39,7 +39,7 @@ func (m *Mission) walk() {
 	}
 	for _, f := range alistFiles {
 		if f.IsDir && m.IsRecursive {
-			logger.Debugf("[thread %2d]: found sub directory [%s]", idx, f.Name)
+			logger.Tracef("[thread %2d]: found sub directory [%s]", idx, f.Name)
 			mm := &Mission{
 				BaseURL:           m.BaseURL,
 				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
@@ -62,7 +62,7 @@ func (m *Mission) walk() {
 			go mm.walk()
 		} else if !f.IsDir {
 			if checkExt(f.Name, m.Exts) {
-				logger.Debugf("[thread %2d]: bind file [%s] to local dir [%s]", idx, f.Name, m.LocalPath)
+				logger.Tracef("[thread %2d]: bind file [%s] to local dir [%s]", idx, f.Name, m.LocalPath)
 				strm := Strm{
 					Name: func() string {
 						//change f.Name to Upper letter except the extension and return the name with extension .strm
@@ -79,7 +79,7 @@ func (m *Mission) walk() {
 				if err != nil {
 					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}
-				logger.Debugf("[thread %2d]: generate [%s] ==> [%s] success", idx, path.Join(strm.Dir, strm.Name), strm.RawURL)
+				logger.Tracef("[thread %2d]: generate [%s] ==> [%s] success", idx, path.Join(strm.Dir, strm.Name), strm.RawURL)
 				logger.Add(1)
 			}
 		}
@@ -107,12 +107,13 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 		m.concurrentChan <- threadIdx
 		m.wg.Done()
 	}()
-	logger.Debugf("[thread %2d]: get files from: %s, recursively: %t, include exts: %v", threadIdx, m.CurrentRemotePath, m.IsRecursive, m.Exts)
+	logger.Debugf("[thread %2d]: get files from: %s", threadIdx, m.CurrentRemotePath)
 	alistFiles, err := m.client.List(m.CurrentRemotePath, "", 1, 0, m.IsForceRefresh)
 	if err != nil {
 		logger.Errorf("[thread %2d]: get files from [%s] error: %s", threadIdx, m.CurrentRemotePath, err.Error())
 		return
 	}
+	logger.Debugf("[thread %2d]: get %d files from [%s]", threadIdx, len(alistFiles), m.CurrentRemotePath)
 	for _, f := range alistFiles {
 		if f.IsDir && m.IsRecursive {
 			logger.Debugf("[thread %2d]: found sub directory [%s]", threadIdx, m.CurrentRemotePath+"/"+f.Name)
@@ -138,7 +139,6 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 			go mm.getStrm(strmChan)
 		} else if !f.IsDir {
 			if checkExt(f.Name, m.Exts) {
-				logger.Debugf("[thread %2d]: bind file [%s] to local dir [%s]", threadIdx, f.Name, m.LocalPath)
 				strm := &Strm{
 					Name: func() string {
 						//change f.Name to Upper letter except the extension and return the name with extension .strm

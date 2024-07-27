@@ -1,5 +1,12 @@
 import os
 
+# edit strm file and only save first line of it
+def save_first_line(file_path):
+    with open(file_path, 'r') as file:
+        first_line = file.readline()
+        with open(file_path, 'w') as new_file:
+            new_file.write(first_line)
+
 def process_strm_file(file_path):
     # Open the file and read its contents, replace the 'https://pan.510222.xyz' to 'http://zuk.v2ns.eu.org:5244', then write back to the file
     with open(file_path, 'r+') as file:

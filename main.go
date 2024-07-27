@@ -214,18 +214,28 @@ func main() {
 				remoteStrms := make(map[string]*Strm, 0)
 				addStrms := make([]*Strm, 0)
 				deleteStrms := make([]*Strm, 0)
+				ignored, added, deleted := 0, 0, 0
 				switch mode {
 				case "local":
 					//TODO 实现本地更新模式
 					for _, e := range config.Endpoints {
-						for _, v := range fetchLocalFiles(e) {
+						localData := fetchLocalFiles(e)
+						logger.Infof("[MAIN]: fetched %d local files", len(localData))
+						for _, v := range localData {
 							localStrms[v.Key()] = v
 						}
-						for _, v := range fetchRemoteFiles(e) {
+						remoteData := fetchRemoteFiles(e)
+						logger.Infof("[MAIN]: fetched %d remote files", len(remoteData))
+						for _, v := range remoteData {
 							if _, ok := localStrms[v.Key()]; !ok {
 								addStrms = append(addStrms, v)
+								logger.Debugf("[MAIN]: %s 已加入待保存列表", v.Name)
+								logger.Tracef("[MAIN]: raw_url: %s", v.RawURL)
 							} else {
-								logger.Debugf("[MAIN]: remote file %s is same with local file %s, ignored.", localStrms[v.Key()].Name, v.Name)
+								ignored++
+								logger.Debugf("[MAIN]: %s already exits, ignored.", v.Name)
+								logger.Tracef("[MAIN]: local content: %s", localStrms[v.Key()].RawURL)
+								logger.Tracef("[MAIN]: remote content: %s", v.RawURL)
 							}
 						}
 					}
@@ -239,7 +249,10 @@ func main() {
 							if _, ok := remoteStrms[v.Key()]; !ok {
 								deleteStrms = append(deleteStrms, v)
 							} else {
-								logger.Debugf("[MAIN]: local file %s is same with remote file %s, ignored.", remoteStrms[v.Key()].Name, v.Name)
+								ignored++
+								logger.Infof("[MAIN]: %s already exits, ignored.", v.Name)
+								logger.Tracef("[MAIN]: local content: %s", localStrms[v.Key()].RawURL)
+								logger.Tracef("[MAIN]: remote content: %s", v.RawURL)
 							}
 						}
 					}
@@ -258,7 +271,7 @@ func main() {
 						logger.Warnf("[MAIN]: generate file %s failed: %s", v.Name, e)
 						continue
 					}
-
+					added++
 					logger.Infof("[MAIN]: generate file %s success", v.Dir+"/"+v.Name)
 				}
 
@@ -267,9 +280,12 @@ func main() {
 
 					if e != nil {
 						logger.Warnf("[MAIN]: delete file %s failed: %s", v.Name, e)
+						continue
 					}
+					deleted++
 				}
-				logger.Infof("[MAIN]: add %d files, delete %d files", len(addStrms), len(deleteStrms))
+				logger.Infof("[MAIN]: want to add %d files, want to delete %d files", len(addStrms), len(deleteStrms))
+				logger.Infof("[MAIN]: ignored %d files, added %d files, deleted %d files", ignored, added, deleted)
 				logger.FinishBar()
 				p.Wait()
 				return nil
