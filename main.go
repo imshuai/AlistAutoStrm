@@ -85,7 +85,7 @@ func main() {
 				//输出配置文件调试信息
 				for _, endpoint := range config.Endpoints {
 					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
-					//logger.Debugf("token: %s", endpoint.Token)
+					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
 					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
 					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
 					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
@@ -101,7 +101,13 @@ func main() {
 					logger.Debugf("[MAIN]: start to get files from: %s", endpoint.BaseURL)
 
 					//初始化ALIST Client
-					client := sdk.NewClient(endpoint.BaseURL, endpoint.Username, endpoint.Password, endpoint.InscureTLSVerify, config.Timeout)
+					var client *sdk.Client
+					if endpoint.Token != "" {
+						client = sdk.NewClientWithToken(endpoint.BaseURL, endpoint.Token, endpoint.InscureTLSVerify, config.Timeout)
+					} else {
+						client = sdk.NewClient(endpoint.BaseURL, endpoint.Username, endpoint.Password, endpoint.InscureTLSVerify, config.Timeout)
+					}
+					// 登录
 					u, err := client.Login()
 					if err != nil {
 						logger.Errorf("[MAIN]: login error: %s", err.Error())

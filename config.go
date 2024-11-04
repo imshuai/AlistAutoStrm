@@ -11,8 +11,8 @@ type Config struct {
 }
 
 type Endpoint struct {
-	BaseURL string `json:"base-url" yaml:"base-url"`
-	//Token            string `json:"token" yaml:"token"`
+	BaseURL          string `json:"base-url" yaml:"base-url"`
+	Token            string `json:"token" yaml:"token"`
 	Username         string `json:"username" yaml:"username"`
 	Password         string `json:"password" yaml:"password"`
 	InscureTLSVerify bool   `json:"inscure-tls-verify" yaml:"inscure-tls-verify"`
