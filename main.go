@@ -13,7 +13,7 @@ const (
 	// 定义常量
 	NAME        = "AlistAutoStrm"
 	DESCRIPTION = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
-	VERSION     = "1.1.0"
+	VERSION     = "1.1.2"
 )
 
 var (
@@ -203,7 +203,7 @@ func main() {
 				//输出配置文件调试信息
 				for _, endpoint := range config.Endpoints {
 					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
-					//logger.Debugf("token: %s", endpoint.Token)
+					logger.Debugf("token: %s", endpoint.Token)
 					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
 					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
 					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)

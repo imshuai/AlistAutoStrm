@@ -2,3 +2,4 @@ bin/*
 data/*
 config.json
 *.exe
+tool.py

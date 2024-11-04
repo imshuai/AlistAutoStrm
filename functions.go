@@ -101,7 +101,13 @@ func setLogLevel() {
 
 func fetchRemoteFiles(e Endpoint) []*Strm {
 	//初始化ALIST Client
-	client := sdk.NewClient(e.BaseURL, e.Username, e.Password, e.InscureTLSVerify, config.Timeout)
+	var client *sdk.Client
+	if e.Token != "" {
+		client = sdk.NewClientWithToken(e.BaseURL, e.Token, e.InscureTLSVerify, config.Timeout)
+	} else {
+		client = sdk.NewClient(e.BaseURL, e.Username, e.Password, e.InscureTLSVerify, config.Timeout)
+	}
+	//登录
 	u, err := client.Login()
 	if err != nil {
 		logger.Errorf("[MAIN]: login error: %s", err.Error())

@@ -11,7 +11,7 @@ USAGE:
    AlistAutoStrm [global options] command [command options] [arguments...]
 
 VERSION:
-   1.1.1
+   1.1.2
 
 DESCRIPTION:
    Auto generate .strm file for EMBY or Jellyfin server use Alist API
@@ -38,6 +38,7 @@ D:\AlistAutoStrm\bin>ass_windows_amd64.exe --config config.json
       "endpoints": [
             {
                   "base-url": "https://alist.cn",
+                  "token": "test-token",
                   "username": "test",
                   "password": "test",
                   "inscure-tls-verify": false,
@@ -72,6 +73,7 @@ exts:
   - ".rmvb"
 endpoints:
   - base-url: "https://alist.cn"
+    token: "test-token"
     username: "test"
     password: "test"
     inscure-tls-verify: false
