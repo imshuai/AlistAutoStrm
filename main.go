@@ -13,7 +13,7 @@ const (
 	// 定义常量
 	NAME        = "AlistAutoStrm"
 	DESCRIPTION = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
-	VERSION     = "1.1.2"
+	VERSION     = "1.2.0"
 )
 
 var (
@@ -27,6 +27,9 @@ func main() {
 	// 程序退出时显示光标
 	defer func() {
 		fmt.Print("\033[?25h")
+		if db != nil {
+			db.Close()
+		}
 	}()
 
 	// 初始化一个mpb.Progress实例
@@ -175,6 +178,11 @@ func main() {
 					Usage: "update mode, support: local, remote. when strm content is same but filename changed, local: keep local filename, remote: rename local filename to remote filename",
 					Value: "local",
 				},
+				&cli.BoolFlag{
+					Name:  "no-incremental-update",
+					Usage: "when this flag is set, will not use incremental update, will update all files",
+					Value: false,
+				},
 			},
 			Action: func(c *cli.Context) error {
 				//TODO 实现strm文件更新功能
@@ -216,6 +224,8 @@ func main() {
 
 				mode := c.String("mode")
 				logger.Debugf("[MAIN]: update mode: %s", mode)
+				config.isIncrementalUpdate = !c.Bool("no-incremental-update") //是否使用增量更新
+				logger.Debugf("[MAIN]: incremental update: %t", config.isIncrementalUpdate)
 				localStrms := make(map[string]*Strm, 0)
 				remoteStrms := make(map[string]*Strm, 0)
 				addStrms := make([]*Strm, 0)
@@ -278,7 +288,7 @@ func main() {
 						continue
 					}
 					added++
-					logger.Infof("[MAIN]: generate file %s success", v.Dir+"/"+v.Name)
+					logger.Infof("[MAIN]: generate file %s success", v.LocalDir+"/"+v.Name)
 				}
 
 				for _, v := range deleteStrms {
@@ -294,6 +304,29 @@ func main() {
 				logger.Infof("[MAIN]: ignored %d files, added %d files, deleted %d files", ignored, added, deleted)
 				logger.FinishBar()
 				p.Wait()
+				return nil
+			},
+		},
+		{
+			Name:  "update-database",
+			Usage: "clean database and get all local strm files stored in database",
+			Action: func(c *cli.Context) error {
+				err := loadConfig(c)
+				if err != nil {
+					return err
+				}
+				records := make(map[string]int, 0)
+				for _, e := range config.Endpoints {
+					strms := fetchLocalFiles(e)
+					for _, v := range strms {
+						records[v.RemoteDir] = 0
+					}
+				}
+				err = SaveRecordCollection(records)
+				if err != nil {
+					return err
+				}
+				logger.Infof("[MAIN]: database has been cleaned, and %d records saved", len(records))
 				return nil
 			},
 		},

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/boltdb/bolt"
 	sdk "github.com/imshuai/alistsdk-go"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -56,6 +57,14 @@ func loadConfig(c *cli.Context) error {
 		if err != nil {
 			return errors.New("unmarshal yaml type config file error: " + err.Error())
 		}
+	}
+	db, err = bolt.Open(config.Database, 0600, nil)
+	if err != nil {
+		return errors.New("open database error: " + err.Error())
+	}
+	config.records, err = GetRecordCollection()
+	if err != nil {
+		return errors.New("get record collection error: " + err.Error())
 	}
 	return nil
 }
@@ -195,7 +204,7 @@ func readStrmFile(file string) *Strm {
 	// TODO 读取strm文件
 	strm := &Strm{}
 	strm.Name = filepath.Base(file)
-	strm.Dir = filepath.Dir(file)
+	strm.LocalDir = filepath.Dir(file)
 	strm.RawURL = func() string {
 		byts, err := os.ReadFile(file)
 		if err != nil {
@@ -203,6 +212,11 @@ func readStrmFile(file string) *Strm {
 		}
 		//返回的字符串应该有且只有一行，且不会以\n或者\r\n结束
 		return strings.TrimRight(strings.Split(string(byts), "\n")[0], "\r")
+	}()
+	strm.RemoteDir = func() string {
+		paths := strings.Split(strings.Split(strm.RawURL, "/d/")[1], "/")
+		paths = paths[:len(paths)-1]
+		return "/" + strings.Join(paths, "/")
 	}()
 	return strm
 }

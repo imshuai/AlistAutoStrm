@@ -15,9 +15,10 @@ var (
 )
 
 type Strm struct {
-	Name   string `json:"name"`
-	Dir    string `json:"dir"`
-	RawURL string `json:"raw_url"`
+	Name      string `json:"name"`
+	LocalDir  string `json:"local_dir"`
+	RemoteDir string `json:"remote_dir"`
+	RawURL    string `json:"raw_url"`
 }
 
 func (s *Strm) Key() string {
@@ -38,7 +39,7 @@ func (s *Strm) Value() []byte {
 
 func (s *Strm) Delete() error {
 	//TODO 使用boltdb实现Strm对象的删除逻辑
-	err := os.RemoveAll(path.Join(s.Dir, s.Name))
+	err := os.RemoveAll(path.Join(s.LocalDir, s.Name))
 	if err != nil {
 		return err
 	}
@@ -70,17 +71,17 @@ func (s *Strm) Save() error {
 
 func (s *Strm) GenStrm(overwrite bool) error {
 	//创建s.Dir目录
-	err := os.MkdirAll(s.Dir, 0666)
+	err := os.MkdirAll(s.LocalDir, 0666)
 	if err != nil {
 		return err
 	}
 	// 如果s.Dir目录下已经存在s.Name文件，并且overwrite为false，则返回错误
-	_, err = os.Stat(path.Join(s.Dir, s.Name))
+	_, err = os.Stat(path.Join(s.LocalDir, s.Name))
 	if !overwrite && !os.IsNotExist(err) {
-		return fmt.Errorf("file %s already exists and overwrite is false", path.Join(s.Dir, s.Name))
+		return fmt.Errorf("file %s already exists and overwrite is false", path.Join(s.LocalDir, s.Name))
 	}
 	// 将s.RawURL写入s.Dir目录下的s.Name文件中
-	return os.WriteFile(path.Join(s.Dir, s.Name), []byte(s.RawURL), 0666)
+	return os.WriteFile(path.Join(s.LocalDir, s.Name), []byte(s.RawURL), 0666)
 }
 
 func GetStrm(rawUrl string) (*Strm, error) {
@@ -107,4 +108,32 @@ func GetStrm(rawUrl string) (*Strm, error) {
 	})
 	// 返回Strm对象和错误
 	return &strm, err
+}
+
+func GetRecordCollection() (map[string]int, error) {
+	var records map[string]int
+	err := db.View(func(tx *bolt.Tx) error {
+		// Assume bucket exists and has keys
+		b := tx.Bucket([]byte("strm"))
+		byts := b.Get([]byte("records"))
+		return json.Unmarshal(byts, &records)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+func SaveRecordCollection(records map[string]int) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("strm"))
+		if err != nil {
+			return err
+		}
+		byts, err := json.Marshal(records)
+		if err != nil {
+			return err
+		}
+		return b.Put([]byte("records"), byts)
+	})
 }

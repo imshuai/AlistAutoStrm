@@ -72,14 +72,15 @@ func (m *Mission) walk() {
 						//return replaceSpaceToDash(name) + ".strm"
 						return name + ".strm"
 					}(),
-					Dir:    m.LocalPath,
-					RawURL: m.BaseURL + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name),
+					LocalDir:  m.LocalPath,
+					RemoteDir: m.CurrentRemotePath,
+					RawURL:    m.BaseURL + "/d" + m.CurrentRemotePath + "/" + f.Name,
 				}
 				err := strm.GenStrm(true)
 				if err != nil {
 					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
 				}
-				logger.Tracef("[thread %2d]: generate [%s] ==> [%s] success", idx, path.Join(strm.Dir, strm.Name), strm.RawURL)
+				logger.Tracef("[thread %2d]: generate [%s] ==> [%s] success", idx, path.Join(strm.LocalDir, strm.Name), strm.RawURL)
 				logger.Add(1)
 			}
 		}
@@ -116,7 +117,11 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 	logger.Debugf("[thread %2d]: get %d files from [%s]", threadIdx, len(alistFiles), m.CurrentRemotePath)
 	for _, f := range alistFiles {
 		if f.IsDir && m.IsRecursive {
-			logger.Debugf("[thread %2d]: found sub directory [%s]", threadIdx, m.CurrentRemotePath+"/"+f.Name)
+			logger.Debugf("[thread %2d]: found directory [%s]", threadIdx, m.CurrentRemotePath+"/"+f.Name)
+			if _, ok := config.records[m.CurrentRemotePath+"/"+f.Name]; ok && config.isIncrementalUpdate {
+				logger.Debugf("[thread %2d]: directory [%s] already processed and use incremental update, skip", threadIdx, m.CurrentRemotePath+"/"+f.Name)
+				continue
+			}
 			mm := &Mission{
 				BaseURL:           m.BaseURL,
 				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
@@ -148,8 +153,10 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 						//return replaceSpaceToDash(name) + ".strm"
 						return name + ".strm"
 					}(),
-					Dir:    m.LocalPath,
-					RawURL: m.BaseURL + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name),
+					RemoteDir: m.CurrentRemotePath,
+					LocalDir:  m.LocalPath,
+					RawURL:    m.BaseURL + "/d" + m.CurrentRemotePath + "/" + f.Name,
+					//RawURL:    m.BaseURL + "/d" + urlEncode(m.CurrentRemotePath+"/"+f.Name), //urlEncode is not necessary
 				}
 				strmChan <- strm
 				logger.Add(1)

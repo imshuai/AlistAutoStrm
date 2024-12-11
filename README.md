@@ -8,16 +8,21 @@ NAME:
    AlistAutoStrm - Auto generate .strm file for EMBY or Jellyfin server use Alist API
 
 USAGE:
-   AlistAutoStrm [global options] command [command options] [arguments...]
+   AlistAutoStrm [global options] command [command options]
 
 VERSION:
-   1.1.2
+   1.2.0
 
 DESCRIPTION:
    Auto generate .strm file for EMBY or Jellyfin server use Alist API
 
 COMMANDS:
-   help, h  Shows a list of commands or help for one command
+   fresh-all        generate all strm files from alist server, whatever the file has been generated or not
+   update           update strm file with choosed mode
+   update-database  clean database and get all local strm files stored in database
+   check            check if strm file is valid
+   version          show version
+   help, h          Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
    --config FILE, -c FILE  Load configuration from FILE (default: "config.json") [%ALIST_AUTO_STRM_CONFIG%]
