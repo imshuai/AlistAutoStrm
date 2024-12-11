@@ -108,7 +108,6 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 		m.concurrentChan <- threadIdx
 		m.wg.Done()
 	}()
-	logger.Debugf("[thread %2d]: get files from: %s", threadIdx, m.CurrentRemotePath)
 	alistFiles, err := m.client.List(m.CurrentRemotePath, "", 1, 0, m.IsForceRefresh)
 	if err != nil {
 		logger.Errorf("[thread %2d]: get files from [%s] error: %s", threadIdx, m.CurrentRemotePath, err.Error())

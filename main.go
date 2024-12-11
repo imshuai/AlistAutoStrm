@@ -3,7 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	sdk "github.com/imshuai/alistsdk-go"
 	"github.com/urfave/cli/v2"
@@ -31,6 +33,8 @@ func main() {
 		if db != nil {
 			db.Close()
 		}
+		time.Sleep(time.Second)
+		fmt.Printf("%s\n", "exit")
 	}()
 
 	// 初始化一个mpb.Progress实例
@@ -65,7 +69,7 @@ func main() {
 			Usage: "generate all strm files from alist server, whatever the file has been generated or not",
 			Action: func(c *cli.Context) error {
 				//从命令行参数读取配置文件信息
-				err := loadConfig(c)
+				err := loadConfig(c.String("config"))
 				if err != nil {
 					return err
 				}
@@ -188,8 +192,9 @@ func main() {
 			Action: func(c *cli.Context) error {
 				//TODO 实现strm文件更新功能
 				//从命令行参数读取配置文件信息
-				err := loadConfig(c)
+				err := loadConfig(c.String("config"))
 				if err != nil {
+					logger.Errorf("[MAIN]: load config error: %s", err.Error())
 					return err
 				}
 				//判断是否使用彩色日志
@@ -212,7 +217,7 @@ func main() {
 				//输出配置文件调试信息
 				for _, endpoint := range config.Endpoints {
 					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
-					logger.Debugf("token: %s", endpoint.Token)
+					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
 					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
 					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
 					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
@@ -229,7 +234,9 @@ func main() {
 				logger.Debugf("[MAIN]: incremental update: %t", config.isIncrementalUpdate)
 				config.records, err = GetRecordCollection()
 				if err != nil {
-					return errors.New("get record collection error: " + err.Error())
+					err := errors.New("get record collection error: " + err.Error())
+					logger.Errorf("[MAIN]: %s", err.Error())
+					return err
 				}
 				localStrms := make(map[string]*Strm, 0)
 				remoteStrms := make(map[string]*Strm, 0)
@@ -278,7 +285,9 @@ func main() {
 						}
 					}
 				default:
-					return fmt.Errorf("[MAIN]: invalid update mode: %s", mode)
+					err := fmt.Errorf("invalid update mode: %s", mode)
+					logger.Errorf("[MAIN]: %s", err.Error())
+					return err
 				}
 				for _, v := range addStrms {
 					var e error
@@ -316,10 +325,28 @@ func main() {
 			Name:  "update-database",
 			Usage: "clean database and get all local strm files stored in database",
 			Action: func(c *cli.Context) error {
-				err := loadConfig(c)
+				err := loadConfig(c.String("config"))
 				if err != nil {
 					return err
 				}
+				logger.Info("[MAIN]: read config file success")
+				logger.Infof("[MAIN]: set log level: %s", config.Loglevel)
+				// 设置日志等级
+				setLogLevel()
+
+				//输出配置文件调试信息
+				for _, endpoint := range config.Endpoints {
+					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
+					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
+					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
+					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
+					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
+					logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
+					logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
+				}
+				logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
+				logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
+				logger.Debugf("[MAIN]: exts: %+v", config.Exts)
 				records := make(map[string]int, 0)
 				for _, e := range config.Endpoints {
 					strms := fetchLocalFiles(e)
@@ -327,8 +354,10 @@ func main() {
 						records[v.RemoteDir] = 0
 					}
 				}
-				err = SaveRecordCollection(records)
-				if err != nil {
+				logger.Infof("[MAIN]: %d records found", len(records))
+				logger.Tracef("[MAIN]: records: %+v", records)
+				if err := SaveRecordCollection(records); err != nil {
+					logger.Errorf("[MAIN]: save record collection failed: %s", err)
 					return err
 				}
 				logger.Infof("[MAIN]: database has been cleaned, and %d records saved", len(records))
@@ -368,5 +397,6 @@ func main() {
 	e := app.Run(os.Args)
 	if e != nil {
 		logger.Error(e)
+		log.Printf("%s\n", e.Error())
 	}
 }

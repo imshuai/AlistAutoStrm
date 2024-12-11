@@ -8,11 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/boltdb/bolt"
 	sdk "github.com/imshuai/alistsdk-go"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 	"gopkg.in/yaml.v3"
@@ -36,9 +36,18 @@ func urlEncode(s string) string {
 	return strings.Join(vv, "/")
 }
 
-func loadConfig(c *cli.Context) error {
+func urlDecode(s string) string {
+	vv := make([]string, 0)
+	ss := strings.Split(s, "/")
+	for _, v := range ss {
+		vvv, _ := url.PathUnescape(v)
+		vv = append(vv, vvv)
+	}
+	return strings.Join(vv, "/")
+}
+
+func loadConfig(configFile string) error {
 	//读取config参数值，并判断传入的是json格式还是yaml格式，再分别使用对应的解析工具解析出Config结构体
-	configFile := c.String("config")
 	configData, err := os.ReadFile(configFile)
 	if err != nil {
 		return errors.New("read config file error: " + err.Error())
@@ -167,7 +176,7 @@ func fetchLocalFiles(e Endpoint) []*Strm {
 			logger.Infof("[MAIN]: dir [%s] is disabled", dir.LocalDirectory)
 			continue
 		}
-
+		logger.Infof("[MAIN]: reading local directory %s", dir.LocalDirectory)
 		// 遍历路径下所有strm文件，包括子目录中
 		files := make([]string, 0)
 		err := filepath.Walk(dir.LocalDirectory, func(path string, info os.FileInfo, err error) error {
@@ -179,12 +188,12 @@ func fetchLocalFiles(e Endpoint) []*Strm {
 			}
 			return nil
 		})
-		logger.Infof("[MAIN]: read local directory %s, find %d strm files", dir.LocalDirectory, len(files))
 		if err != nil {
 			// 读取本地目录出错，记录错误日志
 			logger.Warnf("[MAIN]: read local directory %s error: %s", dir.LocalDirectory, err.Error())
 			continue
 		}
+		logger.Infof("[MAIN]: find %d strm files", len(files))
 		for _, file := range files {
 			// 读取strm文件，返回Strm结构体
 			strm := readStrmFile(file)
@@ -192,6 +201,7 @@ func fetchLocalFiles(e Endpoint) []*Strm {
 			// 将读取的strm文件添加到strms切片中
 			strms = append(strms, strm)
 		}
+		time.Sleep(time.Millisecond * 200)
 	}
 	return strms
 }
@@ -210,9 +220,12 @@ func readStrmFile(file string) *Strm {
 		return strings.TrimRight(strings.Split(string(byts), "\n")[0], "\r")
 	}()
 	strm.RemoteDir = func() string {
+		logger.Tracef("[MAIN]: parse remote directory from strm: %s url: %s", file, strm.RawURL)
 		paths := strings.Split(strings.Split(strm.RawURL, "/d/")[1], "/")
 		paths = paths[:len(paths)-1]
-		return "/" + strings.Join(paths, "/")
+		str := urlDecode("/" + strings.Join(paths, "/"))
+		logger.Debugf("[MAIN]: remote directory: %s", str)
+		return str
 	}()
 	return strm
 }
