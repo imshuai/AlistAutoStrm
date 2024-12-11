@@ -62,10 +62,6 @@ func loadConfig(c *cli.Context) error {
 	if err != nil {
 		return errors.New("open database error: " + err.Error())
 	}
-	config.records, err = GetRecordCollection()
-	if err != nil {
-		return errors.New("get record collection error: " + err.Error())
-	}
 	return nil
 }
 

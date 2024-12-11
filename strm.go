@@ -116,6 +116,9 @@ func GetRecordCollection() (map[string]int, error) {
 		// Assume bucket exists and has keys
 		b := tx.Bucket([]byte("strm"))
 		byts := b.Get([]byte("records"))
+		if byts == nil {
+			return fmt.Errorf("records not found, must use update-database first")
+		}
 		return json.Unmarshal(byts, &records)
 	})
 	if err != nil {

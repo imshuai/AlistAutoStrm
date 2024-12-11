@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -226,6 +227,10 @@ func main() {
 				logger.Debugf("[MAIN]: update mode: %s", mode)
 				config.isIncrementalUpdate = !c.Bool("no-incremental-update") //是否使用增量更新
 				logger.Debugf("[MAIN]: incremental update: %t", config.isIncrementalUpdate)
+				config.records, err = GetRecordCollection()
+				if err != nil {
+					return errors.New("get record collection error: " + err.Error())
+				}
 				localStrms := make(map[string]*Strm, 0)
 				remoteStrms := make(map[string]*Strm, 0)
 				addStrms := make([]*Strm, 0)
