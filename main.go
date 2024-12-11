@@ -301,6 +301,7 @@ func main() {
 						logger.Warnf("[MAIN]: generate file %s failed: %s", v.Name, e)
 						continue
 					}
+					config.records[v.RemoteDir] = 0
 					added++
 					logger.Infof("[MAIN]: generate file %s success", v.LocalDir+"/"+v.Name)
 				}
@@ -312,10 +313,15 @@ func main() {
 						logger.Warnf("[MAIN]: delete file %s failed: %s", v.Name, e)
 						continue
 					}
+					delete(config.records, v.RemoteDir)
 					deleted++
 				}
 				logger.Infof("[MAIN]: want to add %d files, want to delete %d files", len(addStrms), len(deleteStrms))
 				logger.Infof("[MAIN]: ignored %d files, added %d files, deleted %d files", ignored, added, deleted)
+				if err := SaveRecordCollection(config.records); err != nil {
+					logger.Errorf("[MAIN]: save record collection failed: %s", err)
+					return err
+				}
 				logger.FinishBar()
 				p.Wait()
 				return nil
