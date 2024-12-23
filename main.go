@@ -16,7 +16,7 @@ const (
 	// 定义常量
 	NAME        = "AlistAutoStrm"
 	DESCRIPTION = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
-	VERSION     = "1.2.0"
+	VERSION     = "1.2.3"
 )
 
 var (
@@ -34,7 +34,6 @@ func main() {
 			db.Close()
 		}
 		time.Sleep(time.Second)
-		fmt.Printf("%s\n", "exit")
 	}()
 
 	// 初始化一个mpb.Progress实例
@@ -388,6 +387,42 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				//TODO 实现strm文件有效性校验功能
+				err := loadConfig(c.String("config"))
+				if err != nil {
+					return err
+				}
+				logger.Info("[MAIN]: read config file success")
+				logger.Infof("[MAIN]: set log level: %s", config.Loglevel)
+				// 设置日志等级
+				setLogLevel()
+
+				//输出配置文件调试信息
+				for _, endpoint := range config.Endpoints {
+					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
+					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
+					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
+					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
+					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
+					logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
+					logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
+				}
+				logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
+				logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
+				logger.Debugf("[MAIN]: exts: %+v", config.Exts)
+				localstrms := func() []*Strm {
+					strms := make([]*Strm, 0)
+					for _, e := range config.Endpoints {
+						strms = append(strms, fetchLocalFiles(e)...)
+					}
+					return strms
+				}()
+				for _, strm := range localstrms {
+					if !strm.Check() {
+						logger.Infof("[MAIN]: %s invalid, consider remove it, content: %s", strm.LocalDir+"/"+strm.Name, strm.RawURL)
+						continue
+					}
+					logger.Debugf("[MAIN]: %s valid, content: %s", strm.LocalDir+"/"+strm.Name, strm.RawURL)
+				}
 				return nil
 			},
 		},

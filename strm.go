@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 
@@ -82,6 +83,24 @@ func (s *Strm) GenStrm(overwrite bool) error {
 	}
 	// 将s.RawURL写入s.Dir目录下的s.Name文件中
 	return os.WriteFile(path.Join(s.LocalDir, s.Name), []byte(s.RawURL), 0666)
+}
+
+func (s *Strm) Check() (valid bool) {
+	// 向s.RawURL发送HEAD请求，如果返回的状态码为302，则返回true
+	logger.Infof("Checking %s", s.LocalDir+"/"+s.Name)
+	resp, err := http.Head(s.RawURL)
+	if err != nil {
+		logger.Errorf("http.Head(%s) error: %v", s.RawURL, err)
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 302 {
+		return true
+	}
+	if resp.StatusCode == 200 && (resp.Header.Get("Content-Type") == "video/mp4" || resp.Header.Get("Content-Type") == "application/octet-stream") {
+		return true
+	}
+	return false
 }
 
 func GetStrm(rawUrl string) (*Strm, error) {

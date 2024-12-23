@@ -11,7 +11,7 @@ USAGE:
    AlistAutoStrm [global options] command [command options]
 
 VERSION:
-   1.2.0
+   1.2.3
 
 DESCRIPTION:
    Auto generate .strm file for EMBY or Jellyfin server use Alist API
