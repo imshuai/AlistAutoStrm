@@ -18,17 +18,19 @@ builds:
     ldflags: 
       - "-s -w"
     ignore:
-      - goarch: arm
-        goos: windows
       - goarch: arm64
         goos: windows
 checksum:
   name_template: 'checksums.txt'
 archives:
-  format: binary
-  replacements:
-    darwin: macos
-  name_template: '{{ tolower .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ with .Arm }}v{{ . }}{{ end }}'  
+  - 
+    format: binary
+    name_template: >-
+      {{- tolower .ProjectName }}-v
+      {{- .Version }}-
+      {{- replace .Os "darwin" "macos" }}-
+      {{- .Arch }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}  
 release:
   tag: "{{ .CurrentTag }}"
   name_template: "{{.ProjectName}} - v{{.Version}}"
