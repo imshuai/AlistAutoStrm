@@ -17,7 +17,7 @@ DESCRIPTION:
    Auto generate .strm file for EMBY or Jellyfin server use Alist API
 
 COMMANDS:
-   fresh-all        generate all strm files from alist server, whatever the file has been generated or not
+   fresh-all        (TODO) generate all strm files from alist server, whatever the file has been generated or not
    update           update strm file with choosed mode
    update-database  clean database and get all local strm files stored in database
    check            check if strm file is valid
