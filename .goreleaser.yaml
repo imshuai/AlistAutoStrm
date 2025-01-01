@@ -12,7 +12,6 @@ builds:
     goarch:
       - arm
       - arm64
-      - 386
       - amd64
     goarm:
       - 7
@@ -23,12 +22,27 @@ builds:
         goos: windows
       - goarch: arm64
         goos: windows
-      - goarch: 386
-        goos: windows
 checksum:
   name_template: 'checksums.txt'
 archives:
-  - 
-    format: binary
-    name_template: '{{ tolower .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ replace .Arch "386" "x86" }}{{ with .Arm }}v{{ . }}{{ end }}'
-    
+  format: binary
+  replacements:
+    darwin: macos
+  name_template: '{{ tolower .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ with .Arm }}v{{ . }}{{ end }}'  
+release:
+  tag: "{{ .CurrentTag }}"
+  name_template: "{{.ProjectName}} - v{{.Version}}"
+  mode: replace
+changelog:
+  use: github
+  format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^build:'
+      - '^release:'
+      - '^dep:'
+      - 'typo'
+    include:
+      - "^feat:"
