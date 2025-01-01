@@ -17,7 +17,7 @@ const (
 	// 定义常量
 	NAME        = "AlistAutoStrm"
 	DESCRIPTION = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
-	VERSION     = "1.2.3"
+	VERSION     = "1.2.4"
 )
 
 var (
