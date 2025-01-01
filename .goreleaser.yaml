@@ -1,9 +1,10 @@
+version: 2
 project_name: ass
 before:
   hooks:
     - go mod tidy
 builds:
-  -
+  - id: master
     env:
       - CGO_ENABLED=0
     goos: # 编译平台列表 
@@ -23,7 +24,7 @@ builds:
 checksum:
   name_template: 'checksums.txt'
 archives:
-  - 
+  - id: binary
     format: binary
     name_template: >-
       {{- tolower .ProjectName }}-v
@@ -32,7 +33,6 @@ archives:
       {{- .Arch }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}  
 release:
-  tag: "{{ .CurrentTag }}"
   name_template: "{{.ProjectName}} - v{{.Version}}"
   mode: replace
 changelog:
