@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boltdb/bolt"
 	sdk "github.com/imshuai/alistsdk-go"
 	"github.com/sirupsen/logrus"
 	"github.com/vbauerster/mpb/v8"
@@ -46,32 +45,28 @@ func urlDecode(s string) string {
 	return strings.Join(vv, "/")
 }
 
-func loadConfig(configFile string) error {
+func loadConfig(configFile string) (*Config, error) {
 	//读取config参数值，并判断传入的是json格式还是yaml格式，再分别使用对应的解析工具解析出Config结构体
 	configData, err := os.ReadFile(configFile)
 	if err != nil {
-		return errors.New("read config file error: " + err.Error())
+		return nil, errors.New("read config file error: " + err.Error())
 	}
-	config = &Config{}
+	config := &Config{}
 	//判断传入的是json格式还是yaml格式
 	if configFile[len(configFile)-5:] == ".json" {
 		//json格式
 		err = json.Unmarshal(configData, &config)
 		if err != nil {
-			return errors.New("unmarshal json type config file error: " + err.Error())
+			return nil, errors.New("unmarshal json type config file error: " + err.Error())
 		}
 	} else {
 		//yaml格式
 		err = yaml.Unmarshal(configData, &config)
 		if err != nil {
-			return errors.New("unmarshal yaml type config file error: " + err.Error())
+			return nil, errors.New("unmarshal yaml type config file error: " + err.Error())
 		}
 	}
-	db, err = bolt.Open(config.Database, 0600, nil)
-	if err != nil {
-		return errors.New("open database error: " + err.Error())
-	}
-	return nil
+	return config, nil
 }
 
 func statusBar(p *mpb.Progress) *mpb.Bar {
@@ -228,4 +223,20 @@ func readStrmFile(file string) *Strm {
 		return str
 	}()
 	return strm
+}
+
+func PrintDebugInfo() {
+	//输出配置文件调试信息
+	for _, endpoint := range config.Endpoints {
+		logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
+		logger.Debugf("[MAIN]: token: %s", endpoint.Token)
+		logger.Debugf("[MAIN]: username: %s", endpoint.Username)
+		logger.Debugf("[MAIN]: password: %s", endpoint.Password)
+		logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
+		logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
+		logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
+	}
+	logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
+	logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
+	logger.Debugf("[MAIN]: exts: %+v", config.Exts)
 }

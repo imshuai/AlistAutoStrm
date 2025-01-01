@@ -3,11 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
 
-	sdk "github.com/imshuai/alistsdk-go"
+	"github.com/boltdb/bolt"
 	"github.com/urfave/cli/v2"
 	"github.com/vbauerster/mpb/v8"
 )
@@ -22,6 +23,7 @@ const (
 var (
 	logger *StatLogger
 	config *Config
+	db     *bolt.DB
 )
 
 func main() {
@@ -59,17 +61,14 @@ func main() {
 			Usage:   "Load configuration from `FILE`",
 			EnvVars: []string{"ALIST_AUTO_STRM_CONFIG"},
 			Value:   "config.json",
-		},
-	}
-	app.Commands = []*cli.Command{
-		// fresh-all 命令,重新按Alist服务器数据生成strm文件，不在乎是否已经生成过
-		{
-			Name:  "fresh-all",
-			Usage: "generate all strm files from alist server, whatever the file has been generated or not",
-			Action: func(c *cli.Context) error {
-				//从命令行参数读取配置文件信息
-				err := loadConfig(c.String("config"))
+			Action: func(c *cli.Context, path string) error {
+				if c.Command.Name == "version" {
+					return nil
+				}
+				var err error
+				config, err = loadConfig(path)
 				if err != nil {
+					logger.Errorf("[MAIN]: load config error: %s", err.Error())
 					return err
 				}
 				//判断是否使用彩色日志
@@ -77,102 +76,142 @@ func main() {
 					logger.SetFormatter(&Formatter{
 						Colored: true,
 					})
-					logger.Info("use colored log")
+					logger.Info("[MAIN]: use colored log")
 				}
-				//添加进度条
-				bar := statusBar(p)
-				// 设置logger的bar
-				logger.SetBar(bar)
-
+				db, err = bolt.Open(config.Database, 0600, nil)
+				if err != nil {
+					logger.Errorf("[MAIN]: open database error: %s", err.Error())
+					return err
+				}
+				if config.LogFile != "" {
+					f, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+					if err != nil {
+						logger.Errorf("[MAIN]: open log file error: %s", err.Error())
+						return err
+					}
+					mwriter := io.MultiWriter(os.Stdout, f)
+					logger.SetOutput(mwriter)
+				}
 				logger.Info("[MAIN]: read config file success")
 				logger.Infof("[MAIN]: set log level: %s", config.Loglevel)
 				// 设置日志等级
 				setLogLevel()
-
-				//输出配置文件调试信息
-				for _, endpoint := range config.Endpoints {
-					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
-					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
-					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
-					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
-					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
-					logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
-					logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
-				}
-				logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
-				logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
-				logger.Debugf("[MAIN]: exts: %+v", config.Exts)
-
-				for _, endpoint := range config.Endpoints {
-					//开始按配置文件遍历远程目录
-					logger.Debugf("[MAIN]: start to get files from: %s", endpoint.BaseURL)
-
-					//初始化ALIST Client
-					var client *sdk.Client
-					if endpoint.Token != "" {
-						client = sdk.NewClientWithToken(endpoint.BaseURL, endpoint.Token, endpoint.InscureTLSVerify, config.Timeout)
-					} else {
-						client = sdk.NewClient(endpoint.BaseURL, endpoint.Username, endpoint.Password, endpoint.InscureTLSVerify, config.Timeout)
-					}
-					// 登录
-					u, err := client.Login()
-					if err != nil {
-						logger.Errorf("[MAIN]: login error: %s", err.Error())
-						continue
-					}
-					logger.Infof("[MAIN]: %s login success, username: %s", endpoint.BaseURL, u.Username)
-					// 遍历endpoint.Dirs
-					for _, dir := range endpoint.Dirs {
-						// 设置总共需要同步的目录数量
-						logger.SetTotal(int64(len(dir.RemoteDirectories)) + logger.GetCurrent())
-						// 如果目录被禁用，则跳过
-						if dir.Disabled {
-							logger.Infof("[MAIN]: dir [%s] is disabled", dir.LocalDirectory)
-							continue
-						}
-						// 创建本地目录
-						logger.Debug("[MAIN]: create local directory", dir.LocalDirectory)
-						err := os.MkdirAll(dir.LocalDirectory, 0666)
-						if err != nil {
-							logger.Errorf("[MAIN]: create local directory %s error: %s", dir.LocalDirectory, err.Error())
-							continue
-						}
-						// 遍历dir.RemoteDirectories
-						for _, remoteDir := range dir.RemoteDirectories {
-							// 开始生成strm文件
-							logger.Infof("[MAIN]: start to generate strm file from remote directory: %s", remoteDir)
-							m := &Mission{
-								// 服务器地址
-								BaseURL: endpoint.BaseURL,
-								// 当前远程路径
-								CurrentRemotePath: remoteDir,
-								// 本地路径
-								LocalPath: dir.LocalDirectory,
-								// 扩展名
-								Exts: config.Exts,
-								// 是否创建子目录
-								IsCreateSubDirectory: config.CreateSubDirectory || dir.CreateSubDirectory,
-								// 是否递归
-								IsRecursive: !dir.NotRescursive,
-								// 是否强制刷新
-								IsForceRefresh: dir.ForceRefresh,
-								// 客户端
-								client: client,
-							}
-							// 运行
-							m.Run(endpoint.MaxConnections)
-							// 增加计数器
-							logger.Increment()
-						}
-					}
-				}
-				// 进度条完成
-				logger.FinishBar()
-				logger.Info("[MAIN]: generate all strm file done, exit")
-				p.Wait()
 				return nil
 			},
 		},
+	}
+	app.Commands = []*cli.Command{
+		// fresh-all 命令,重新按Alist服务器数据生成strm文件，不在乎是否已经生成过
+		// {
+		// 	Name:  "fresh-all",
+		// 	Usage: "generate all strm files from alist server, whatever the file has been generated or not",
+		// 	Action: func(c *cli.Context) error {
+		// 		//从命令行参数读取配置文件信息
+		// 		err := loadConfig(c.String("config"))
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		//判断是否使用彩色日志
+		// 		if config.ColoredLog {
+		// 			logger.SetFormatter(&Formatter{
+		// 				Colored: true,
+		// 			})
+		// 			logger.Info("use colored log")
+		// 		}
+		// 		//添加进度条
+		// 		bar := statusBar(p)
+		// 		// 设置logger的bar
+		// 		logger.SetBar(bar)
+
+		// 		logger.Info("[MAIN]: read config file success")
+		// 		logger.Infof("[MAIN]: set log level: %s", config.Loglevel)
+		// 		// 设置日志等级
+		// 		setLogLevel()
+
+		// 		//输出配置文件调试信息
+		// 		for _, endpoint := range config.Endpoints {
+		// 			logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
+		// 			logger.Debugf("[MAIN]: token: %s", endpoint.Token)
+		// 			logger.Debugf("[MAIN]: username: %s", endpoint.Username)
+		// 			logger.Debugf("[MAIN]: password: %s", endpoint.Password)
+		// 			logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
+		// 			logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
+		// 			logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
+		// 		}
+		// 		logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
+		// 		logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
+		// 		logger.Debugf("[MAIN]: exts: %+v", config.Exts)
+
+		// 		for _, endpoint := range config.Endpoints {
+		// 			//开始按配置文件遍历远程目录
+		// 			logger.Debugf("[MAIN]: start to get files from: %s", endpoint.BaseURL)
+
+		// 			//初始化ALIST Client
+		// 			var client *sdk.Client
+		// 			if endpoint.Token != "" {
+		// 				client = sdk.NewClientWithToken(endpoint.BaseURL, endpoint.Token, endpoint.InscureTLSVerify, config.Timeout)
+		// 			} else {
+		// 				client = sdk.NewClient(endpoint.BaseURL, endpoint.Username, endpoint.Password, endpoint.InscureTLSVerify, config.Timeout)
+		// 			}
+		// 			// 登录
+		// 			u, err := client.Login()
+		// 			if err != nil {
+		// 				logger.Errorf("[MAIN]: login error: %s", err.Error())
+		// 				continue
+		// 			}
+		// 			logger.Infof("[MAIN]: %s login success, username: %s", endpoint.BaseURL, u.Username)
+		// 			// 遍历endpoint.Dirs
+		// 			for _, dir := range endpoint.Dirs {
+		// 				// 设置总共需要同步的目录数量
+		// 				logger.SetTotal(int64(len(dir.RemoteDirectories)) + logger.GetCurrent())
+		// 				// 如果目录被禁用，则跳过
+		// 				if dir.Disabled {
+		// 					logger.Infof("[MAIN]: dir [%s] is disabled", dir.LocalDirectory)
+		// 					continue
+		// 				}
+		// 				// 创建本地目录
+		// 				logger.Debug("[MAIN]: create local directory", dir.LocalDirectory)
+		// 				err := os.MkdirAll(dir.LocalDirectory, 0666)
+		// 				if err != nil {
+		// 					logger.Errorf("[MAIN]: create local directory %s error: %s", dir.LocalDirectory, err.Error())
+		// 					continue
+		// 				}
+		// 				// 遍历dir.RemoteDirectories
+		// 				for _, remoteDir := range dir.RemoteDirectories {
+		// 					// 开始生成strm文件
+		// 					logger.Infof("[MAIN]: start to generate strm file from remote directory: %s", remoteDir)
+		// 					m := &Mission{
+		// 						// 服务器地址
+		// 						BaseURL: endpoint.BaseURL,
+		// 						// 当前远程路径
+		// 						CurrentRemotePath: remoteDir,
+		// 						// 本地路径
+		// 						LocalPath: dir.LocalDirectory,
+		// 						// 扩展名
+		// 						Exts: config.Exts,
+		// 						// 是否创建子目录
+		// 						IsCreateSubDirectory: config.CreateSubDirectory || dir.CreateSubDirectory,
+		// 						// 是否递归
+		// 						IsRecursive: !dir.NotRescursive,
+		// 						// 是否强制刷新
+		// 						IsForceRefresh: dir.ForceRefresh,
+		// 						// 客户端
+		// 						client: client,
+		// 					}
+		// 					// 运行
+		// 					m.Run(endpoint.MaxConnections)
+		// 					// 增加计数器
+		// 					logger.Increment()
+		// 				}
+		// 			}
+		// 		}
+		// 		// 进度条完成
+		// 		logger.FinishBar()
+		// 		logger.Info("[MAIN]: generate all strm file done, exit")
+		// 		p.Wait()
+		// 		return nil
+		// 	},
+		// },
 		{
 			Name:  "update",
 			Usage: "update strm file with choosed mode",
@@ -190,42 +229,14 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				//TODO 实现strm文件更新功能
-				//从命令行参数读取配置文件信息
-				err := loadConfig(c.String("config"))
-				if err != nil {
-					logger.Errorf("[MAIN]: load config error: %s", err.Error())
-					return err
-				}
-				//判断是否使用彩色日志
-				if config.ColoredLog {
-					logger.SetFormatter(&Formatter{
-						Colored: true,
-					})
-					logger.Info("[MAIN]: use colored log")
-				}
+				var err error
 				//添加进度条
 				bar := statusBar(p)
 				// 设置logger的bar
 				logger.SetBar(bar)
 
-				logger.Info("[MAIN]: read config file success")
-				logger.Infof("[MAIN]: set log level: %s", config.Loglevel)
-				// 设置日志等级
-				setLogLevel()
-
 				//输出配置文件调试信息
-				for _, endpoint := range config.Endpoints {
-					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
-					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
-					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
-					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
-					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
-					logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
-					logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
-				}
-				logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
-				logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
-				logger.Debugf("[MAIN]: exts: %+v", config.Exts)
+				PrintDebugInfo()
 
 				mode := c.String("mode")
 				logger.Debugf("[MAIN]: update mode: %s", mode)
@@ -330,28 +341,9 @@ func main() {
 			Name:  "update-database",
 			Usage: "clean database and get all local strm files stored in database",
 			Action: func(c *cli.Context) error {
-				err := loadConfig(c.String("config"))
-				if err != nil {
-					return err
-				}
-				logger.Info("[MAIN]: read config file success")
-				logger.Infof("[MAIN]: set log level: %s", config.Loglevel)
-				// 设置日志等级
-				setLogLevel()
-
 				//输出配置文件调试信息
-				for _, endpoint := range config.Endpoints {
-					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
-					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
-					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
-					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
-					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
-					logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
-					logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
-				}
-				logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
-				logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
-				logger.Debugf("[MAIN]: exts: %+v", config.Exts)
+				PrintDebugInfo()
+
 				records := make(map[string]int, 0)
 				for _, e := range config.Endpoints {
 					strms := fetchLocalFiles(e)
@@ -387,28 +379,9 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				//TODO 实现strm文件有效性校验功能
-				err := loadConfig(c.String("config"))
-				if err != nil {
-					return err
-				}
-				logger.Info("[MAIN]: read config file success")
-				logger.Infof("[MAIN]: set log level: %s", config.Loglevel)
-				// 设置日志等级
-				setLogLevel()
-
 				//输出配置文件调试信息
-				for _, endpoint := range config.Endpoints {
-					logger.Debugf("[MAIN]: base url: %s", endpoint.BaseURL)
-					logger.Debugf("[MAIN]: token: %s", endpoint.Token)
-					logger.Debugf("[MAIN]: username: %s", endpoint.Username)
-					logger.Debugf("[MAIN]: password: %s", endpoint.Password)
-					logger.Debugf("[MAIN]: inscure tls verify: %t", endpoint.InscureTLSVerify)
-					logger.Debugf("[MAIN]: dirs: %+v", endpoint.Dirs)
-					logger.Debugf("[MAIN]: max connections: %d", endpoint.MaxConnections)
-				}
-				logger.Debugf("[MAIN]: timeout: %d", config.Timeout)
-				logger.Debugf("[MAIN]: create sub directory: %t", config.CreateSubDirectory)
-				logger.Debugf("[MAIN]: exts: %+v", config.Exts)
+				PrintDebugInfo()
+
 				localstrms := func() []*Strm {
 					strms := make([]*Strm, 0)
 					for _, e := range config.Endpoints {

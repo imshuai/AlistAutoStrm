@@ -11,10 +11,6 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-var (
-	db *bolt.DB
-)
-
 type Strm struct {
 	Name      string `json:"name"`
 	LocalDir  string `json:"local_dir"`
