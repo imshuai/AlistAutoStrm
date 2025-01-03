@@ -88,20 +88,20 @@ func statusBar(p *mpb.Progress) *mpb.Bar {
 }
 
 func setLogLevel() {
-	switch config.Loglevel {
-	case "trace", "TRACE":
+	switch strings.ToLower(config.Loglevel) {
+	case "trace":
 		logger.SetLevel(logrus.TraceLevel)
-	case "debug", "DEBUG":
+	case "debug":
 		logger.SetLevel(logrus.DebugLevel)
-	case "info", "INFO":
+	case "info":
 		logger.SetLevel(logrus.InfoLevel)
-	case "warn", "warning", "WARN":
+	case "warn", "warning":
 		logger.SetLevel(logrus.WarnLevel)
-	case "error", "ERROR":
+	case "error":
 		logger.SetLevel(logrus.ErrorLevel)
-	case "fatal", "FATAL":
+	case "fatal":
 		logger.SetLevel(logrus.FatalLevel)
-	case "panic", "PANIC":
+	case "panic":
 		logger.SetLevel(logrus.PanicLevel)
 	default:
 		logger.SetLevel(logrus.InfoLevel)
@@ -145,6 +145,8 @@ func fetchRemoteFiles(e Endpoint) []*Strm {
 				LocalPath: dir.LocalDirectory,
 				// 扩展名
 				Exts: config.Exts,
+				// 额外扩展名
+				AltExts: config.AltExts,
 				// 是否创建子目录
 				IsCreateSubDirectory: config.CreateSubDirectory || dir.CreateSubDirectory,
 				// 是否递归
