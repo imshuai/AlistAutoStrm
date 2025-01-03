@@ -16,7 +16,7 @@ import (
 const (
 	NAME        = "AlistAutoStrm"
 	DESCRIPTION = "Auto generate .strm file for EMBY or Jellyfin server use Alist API"
-	VERSION     = "1.2.5"
+	VERSION     = "1.2.7"
 )
 
 var (

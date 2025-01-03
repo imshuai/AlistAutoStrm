@@ -4,6 +4,7 @@ Auto generate .strm file for EMBY or Jellyfin server use Alist API
 
 ## 最近更新  
  - 2025-01-03 v1.2.5增加同时下载额外文件功能，例如：.jpg、.nfo、.srt、.ass等, 在配置文件中使用`alt-exts`配置一个字符串数组，例如：`[".jpg",".nfo",".srt",".ass"]`
+ - 2025-01-03 v1.2.7修复在下载文件时，如果目标文件夹不存在报错的问题
 ## Usage 使用方法  
 ```
 D:\AlistAutoStrm\bin>ass_windows_amd64.exe --help                 
@@ -14,7 +15,7 @@ USAGE:
    AlistAutoStrm [global options] command [command options]
 
 VERSION:
-   1.2.5
+   1.2.7
 
 DESCRIPTION:
    Auto generate .strm file for EMBY or Jellyfin server use Alist API
