@@ -98,9 +98,9 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 				}
 
 				// 下载文件
-				req, err := http.NewRequest("GET", f.RawURL, nil)
+				req, err := http.NewRequest("GET", m.BaseURL+"/d"+m.CurrentRemotePath+"/"+f.Name, nil)
 				if err != nil {
-					logger.Errorf("[thread %2d]: create request for [%s] error: %s", threadIdx, f.RawURL, err.Error())
+					logger.Errorf("[thread %2d]: create request for [%s] error: %s", threadIdx, m.BaseURL+"/d"+m.CurrentRemotePath+"/"+f.Name, err.Error())
 					continue
 				}
 
@@ -109,7 +109,7 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
-					logger.Errorf("[thread %2d]: download [%s] error: %s", threadIdx, f.RawURL, err.Error())
+					logger.Errorf("[thread %2d]: download [%s] error: %s", threadIdx, m.BaseURL+"/d"+m.CurrentRemotePath+"/"+f.Name, err.Error())
 					continue
 				}
 				defer resp.Body.Close()
