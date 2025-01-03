@@ -42,8 +42,7 @@ changelog:
   format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
   filters:
     exclude:
-      - '^test:'
-      - '^dep:'
+      - '^test'
+      - '^dep'
       - 'typo'
-    include:
-      - "^feat:"
+      - '^build'
