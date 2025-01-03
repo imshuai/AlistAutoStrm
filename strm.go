@@ -18,71 +18,59 @@ type Strm struct {
 	RawURL    string `json:"raw_url"`
 }
 
+// 生成Strm对象的唯一键
 func (s *Strm) Key() string {
-	// 使用各算法计算key
-	// md5.Sum([]byte(s.RawURL))
-	// sha1.Sum([]byte(s.RawURL))
-	// sha256.Sum256([]byte(s.RawURL))
-	// sha512.Sum512([]byte(s.RawURL))
-	//
 	byts := sha1.Sum([]byte(s.RawURL))
 	return fmt.Sprintf("%x", byts)
 }
 
+// 将Strm对象序列化为JSON字节数组
 func (s *Strm) Value() []byte {
 	byts, _ := json.Marshal(s)
 	return byts
 }
 
+// 删除Strm对象
 func (s *Strm) Delete() error {
-	//TODO 使用boltdb实现Strm对象的删除逻辑
 	err := os.RemoveAll(path.Join(s.LocalDir, s.Name))
 	if err != nil {
 		return err
 	}
-	// return db.Update(func(tx *bolt.Tx) error {
-	// 	// 获取名为strm的bucket
-	// 	b := tx.Bucket([]byte("strm"))
-	// 	if b == nil {
-	// 		// 如果bucket不存在，返回错误
-	// 		return fmt.Errorf("bucket not found")
-	// 	}
-	// 	// 根据key删除value
-	// 	return b.Delete([]byte(s.Key()))
-	// })
-	return nil
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("strm"))
+		if b == nil {
+			return fmt.Errorf("bucket not found")
+		}
+		return b.Delete([]byte(s.Key()))
+	})
 }
 
+// 保存Strm对象
 func (s *Strm) Save() error {
-	//TODO 使用boltdb实现Strm对象的保存逻辑
 	return db.Update(func(tx *bolt.Tx) error {
-		//创建一个名为"strm"的bucket
 		b, err := tx.CreateBucketIfNotExists([]byte("strm"))
 		if err != nil {
 			return err
 		}
-		//将Strm对象的key和value存入bucket中
 		return b.Put([]byte(s.Key()), s.Value())
 	})
 }
 
+// 生成Strm文件
 func (s *Strm) GenStrm(overwrite bool) error {
-	//创建s.Dir目录
 	err := os.MkdirAll(s.LocalDir, 0666)
 	if err != nil {
 		return err
 	}
-	// 如果s.Dir目录下已经存在s.Name文件，并且overwrite为false，则返回错误
 	_, err = os.Stat(path.Join(s.LocalDir, s.Name))
 	if !overwrite && !os.IsNotExist(err) {
 		return fmt.Errorf("file %s already exists and overwrite is false", path.Join(s.LocalDir, s.Name))
 	}
-	// 将s.RawURL写入s.Dir目录下的s.Name文件中
 	return os.WriteFile(path.Join(s.LocalDir, s.Name), []byte(s.RawURL), 0666)
 }
 
-func (s *Strm) Check() (valid bool) {
-	// 向s.RawURL发送HEAD请求，如果返回的状态码为302，则返回true
+// 检查Strm文件是否有效
+func (s *Strm) Check() bool {
 	logger.Infof("Checking %s", s.LocalDir+"/"+s.Name)
 	resp, err := http.Head(s.RawURL)
 	if err != nil {
@@ -90,45 +78,34 @@ func (s *Strm) Check() (valid bool) {
 		return false
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 302 {
-		return true
-	}
-	if resp.StatusCode == 200 && (resp.Header.Get("Content-Type") == "video/mp4" || resp.Header.Get("Content-Type") == "application/octet-stream") {
+	if resp.StatusCode == 302 || (resp.StatusCode == 200 && (resp.Header.Get("Content-Type") == "video/mp4" || resp.Header.Get("Content-Type") == "application/octet-stream")) {
 		return true
 	}
 	return false
 }
 
+// 根据rawUrl获取Strm对象
 func GetStrm(rawUrl string) (*Strm, error) {
-	//TODO 使用boltdb实现根据key获取Strm对象的逻辑
 	var strm Strm
-
 	strm.RawURL = rawUrl
-
 	err := db.View(func(tx *bolt.Tx) error {
-		// 获取名为strm的bucket
 		b := tx.Bucket([]byte("strm"))
 		if b == nil {
-			// 如果bucket不存在，返回错误
 			return fmt.Errorf("bucket not found")
 		}
-		// 根据key获取value
 		v := b.Get([]byte(strm.Key()))
 		if v == nil {
-			// 如果key不存在，返回错误
 			return fmt.Errorf("key not found")
 		}
-		// 将value反序列化为Strm对象
 		return json.Unmarshal(v, &strm)
 	})
-	// 返回Strm对象和错误
 	return &strm, err
 }
 
+// 获取记录集合
 func GetRecordCollection() (map[string]int, error) {
 	var records map[string]int
 	err := db.View(func(tx *bolt.Tx) error {
-		// Assume bucket exists and has keys
 		b := tx.Bucket([]byte("strm"))
 		byts := b.Get([]byte("records"))
 		if byts == nil {
@@ -142,6 +119,7 @@ func GetRecordCollection() (map[string]int, error) {
 	return records, nil
 }
 
+// 保存记录集合
 func SaveRecordCollection(records map[string]int) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte("strm"))
