@@ -115,6 +115,11 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 				defer resp.Body.Close()
 
 				// 创建目标文件
+				err = os.MkdirAll(m.LocalPath, 0755)
+				if err != nil {
+					logger.Errorf("[thread %2d]: create directory [%s] error: %s", threadIdx, m.LocalPath, err.Error())
+					continue
+				}
 				out, err := os.Create(filePath)
 				if err != nil {
 					logger.Errorf("[thread %2d]: create file [%s] error: %s", threadIdx, filePath, err.Error())
@@ -145,7 +150,7 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 				}
 
 				logger.Debugf("[thread %2d]: successfully downloaded [%s] to [%s], size %d bytes",
-					threadIdx, f.RawURL, filePath, fileInfo.Size())
+					threadIdx, m.BaseURL+"/d"+m.CurrentRemotePath+"/"+f.Name, filePath, fileInfo.Size())
 
 			}
 		}
