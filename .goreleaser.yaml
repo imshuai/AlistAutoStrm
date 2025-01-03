@@ -36,9 +36,11 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}  
 release:
   name_template: "AlistAutoStrm - v{{.Version}}"
-  mode: replace
+  mode: keep-existing
+  prerelease: auto
 changelog:
   use: github
+  skip: "auto"
   format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
   filters:
     exclude:
