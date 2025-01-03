@@ -1,6 +1,9 @@
 package main
 
 import (
+	"io"
+	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -16,90 +19,13 @@ type Mission struct {
 	LocalPath            string
 	BaseURL              string
 	Exts                 []string
+	AltExts              []string
 	IsCreateSubDirectory bool
 	IsRecursive          bool
 	IsForceRefresh       bool
 	client               *sdk.Client
 	wg                   *sync.WaitGroup
 	concurrentChan       chan int
-}
-
-// Walk walks the current remote path
-func (m *Mission) walk() {
-	idx := <-m.concurrentChan
-	defer func() {
-		m.concurrentChan <- idx
-		m.wg.Done()
-	}()
-	logger.Tracef("[thread %2d]: get files from: %s, recursively: %t, include exts: %v", idx, m.CurrentRemotePath, m.IsRecursive, m.Exts)
-	alistFiles, err := m.client.List(m.CurrentRemotePath, "", 1, 0, m.IsForceRefresh)
-	if err != nil {
-		logger.Errorf("[thread %2d]: get files from [%s] error: %s", idx, m.CurrentRemotePath, err.Error())
-		return
-	}
-	for _, f := range alistFiles {
-		if f.IsDir && m.IsRecursive {
-			logger.Tracef("[thread %2d]: found sub directory [%s]", idx, f.Name)
-			mm := &Mission{
-				BaseURL:           m.BaseURL,
-				CurrentRemotePath: m.CurrentRemotePath + "/" + f.Name,
-				LocalPath: func() string {
-					if m.IsCreateSubDirectory {
-						return path.Join(m.LocalPath, f.Name)
-					} else {
-						return m.LocalPath
-					}
-				}(),
-				Exts:                 m.Exts,
-				IsCreateSubDirectory: m.IsCreateSubDirectory,
-				IsRecursive:          m.IsRecursive,
-				IsForceRefresh:       m.IsForceRefresh,
-				client:               m.client,
-				wg:                   m.wg,
-				concurrentChan:       m.concurrentChan,
-			}
-			m.wg.Add(1)
-			go mm.walk()
-		} else if !f.IsDir {
-			if checkExt(f.Name, m.Exts) {
-				logger.Tracef("[thread %2d]: bind file [%s] to local dir [%s]", idx, f.Name, m.LocalPath)
-				strm := Strm{
-					Name: func() string {
-						//change f.Name to Upper letter except the extension and return the name with extension .strm
-						ext := filepath.Ext(f.Name)
-						name := strings.TrimSuffix(f.Name, ext)
-						//name = strings.ToUpper(name)
-						//return replaceSpaceToDash(name) + ".strm"
-						return name + ".strm"
-					}(),
-					LocalDir:  m.LocalPath,
-					RemoteDir: m.CurrentRemotePath,
-					RawURL:    m.BaseURL + "/d" + m.CurrentRemotePath + "/" + f.Name,
-				}
-				err := strm.GenStrm(true)
-				if err != nil {
-					logger.Errorf("[thread %2d]: save file [%s] error: %s", idx, m.CurrentRemotePath+"/"+f.Name, err.Error())
-				}
-				logger.Tracef("[thread %2d]: generate [%s] ==> [%s] success", idx, path.Join(strm.LocalDir, strm.Name), strm.RawURL)
-				logger.Add(1)
-			}
-		}
-	}
-}
-
-func (m *Mission) Run(concurrentNum int) {
-	logger.Infof("[MAIN]: Run mission with %d threads", concurrentNum)
-	m.concurrentChan = make(chan int, concurrentNum)
-	for i := 0; i < concurrentNum; i++ {
-		logger.Debugf("[MAIN]: Push thread %d to concurrent channel", i)
-		m.concurrentChan <- i
-	}
-	m.wg = &sync.WaitGroup{}
-	m.wg.Add(1)
-	go m.walk()
-	logger.Info("[MAIN]: Wait for walk to finish")
-	m.wg.Wait()
-	logger.Info("[MAIN]: All threads finished")
 }
 
 func (m *Mission) getStrm(strmChan chan *Strm) {
@@ -132,6 +58,7 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 					}
 				}(),
 				Exts:                 m.Exts,
+				AltExts:              m.AltExts,
 				IsCreateSubDirectory: m.IsCreateSubDirectory,
 				IsRecursive:          m.IsRecursive,
 				IsForceRefresh:       m.IsForceRefresh,
@@ -159,58 +86,118 @@ func (m *Mission) getStrm(strmChan chan *Strm) {
 				}
 				strmChan <- strm
 				logger.Add(1)
+			} else if checkExt(f.Name, m.AltExts) {
+				// check if the file is in the altExts list
+				// if it is, download the file to the current local directory
+				logger.Debugf("[thread %2d]: found file [%s], download to [%s]", threadIdx, m.CurrentRemotePath+"/"+f.Name, m.LocalPath)
+				// 检查文件是否已存在
+				filePath := path.Join(m.LocalPath, f.Name)
+				if _, statErr := os.Stat(filePath); statErr == nil {
+					logger.Debugf("[thread %2d]: file [%s] already exists, skip download", threadIdx, filePath)
+					continue
+				}
+
+				// 下载文件
+				req, err := http.NewRequest("GET", f.RawURL, nil)
+				if err != nil {
+					logger.Errorf("[thread %2d]: create request for [%s] error: %s", threadIdx, f.RawURL, err.Error())
+					continue
+				}
+
+				// 设置常见的浏览器User-Agent
+				req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					logger.Errorf("[thread %2d]: download [%s] error: %s", threadIdx, f.RawURL, err.Error())
+					continue
+				}
+				defer resp.Body.Close()
+
+				// 创建目标文件
+				out, err := os.Create(filePath)
+				if err != nil {
+					logger.Errorf("[thread %2d]: create file [%s] error: %s", threadIdx, filePath, err.Error())
+					continue
+				}
+				defer out.Close()
+
+				// 写入文件
+				_, err = io.Copy(out, resp.Body)
+				if err != nil {
+					logger.Errorf("[thread %2d]: write file [%s] error: %s", threadIdx, filePath, err.Error())
+					continue
+				}
+
+				// 检查文件大小是否匹配
+				fileInfo, err := os.Stat(filePath)
+				if err != nil {
+					logger.Errorf("[thread %2d]: get file info [%s] error: %s", threadIdx, filePath, err.Error())
+					os.Remove(filePath)
+					continue
+				}
+
+				if fileInfo.Size() != f.Size {
+					logger.Errorf("[thread %2d]: file size mismatch for [%s], expected %d but got %d",
+						threadIdx, filePath, f.Size, fileInfo.Size())
+					os.Remove(filePath)
+					continue
+				}
+
+				logger.Debugf("[thread %2d]: successfully downloaded [%s] to [%s], size %d bytes",
+					threadIdx, f.RawURL, filePath, fileInfo.Size())
+
 			}
 		}
 	}
 }
 
-// This function returns a slice of pointers to Strm objects
+// 这个函数返回一个指向 Strm 对象的指针切片
 func (m *Mission) GetAllStrm(concurrentNum int) []*Strm {
-	// Log the number of concurrent threads
+	// 记录并发线程的数量
 	logger.Infof("[MAIN]: Run mission with %d threads", concurrentNum)
-	// Create a channel for concurrent threads
+	// 创建一个用于并发线程的通道
 	m.concurrentChan = make(chan int, concurrentNum)
-	// Push the threads to the channel
+	// 将线程推送到通道中
 	for i := 0; i < concurrentNum; i++ {
-
 		logger.Debugf("[MAIN]: Push thread %d to concurrent channel", i)
 		m.concurrentChan <- i
 	}
-	// Create a waitgroup
+	// 创建一个等待组
 	m.wg = &sync.WaitGroup{}
-	// Add one to the waitgroup
+	// 向等待组添加一个计数
 	m.wg.Add(1)
-	// Create a channel for strm objects
+	// 创建一个用于 strm 对象的通道
 	strmChan := make(chan *Strm, 1000)
-	// Run the getStrm function in a goroutine
+	// 在一个 goroutine 中运行 getStrm 函数
 	go m.getStrm(strmChan)
-	// Create a channel to stop the goroutine
+	// 创建一个用于停止 goroutine 的通道
 	stopChan := make(chan struct{})
-	// Create a channel to return the results
+	// 创建一个用于返回结果的通道
 	resultChan := make(chan []*Strm, 1)
-	// Run the goroutine to collect the strm objects
+	// 运行 goroutine 来收集 strm 对象
 	go func() {
-		// Create an empty slice of strm pointers
+		// 创建一个空的 strm 指针切片
 		strms := make([]*Strm, 0)
-		// Loop indefinitely
+		// 无限循环
 		for {
-			// Select from the stop channel or the strm channel
+			// 从停止通道或 strm 通道中选择
 			select {
-			// If the stop channel is closed, return the results
+			// 如果停止通道关闭，返回结果
 			case <-stopChan:
 				resultChan <- strms
-			// If a strm object is received, append it to the slice
+			// 如果接收到一个 strm 对象，将其追加到切片中
 			case strm := <-strmChan:
 				strms = append(strms, strm)
 			}
-			// Sleep for 5 milliseconds
+			// 休眠 5 毫秒
 			time.Sleep(5 * time.Millisecond)
 		}
 	}()
-	// Wait for the waitgroup to finish
+	// 等待等待组完成
 	m.wg.Wait()
-	// Send a stop signal to the goroutine
+	// 发送停止信号给 goroutine
 	stopChan <- struct{}{}
-	// Return the results
+	// 返回结果
 	return <-resultChan
 }

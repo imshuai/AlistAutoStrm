@@ -8,6 +8,7 @@ type Config struct {
 	ColoredLog          bool       `json:"colored-log" yaml:"colored-log"`
 	Timeout             int        `json:"timeout" yaml:"timeout"`
 	Exts                []string   `json:"exts" yaml:"exts"`
+	AltExts             []string   `json:"alt-exts" yaml:"alt-exts"` // alternative extensions to copy to local directory
 	CreateSubDirectory  bool       `json:"create-sub-directory" yaml:"create-sub-directory"`
 	isIncrementalUpdate bool
 	records             map[string]int
