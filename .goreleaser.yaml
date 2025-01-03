@@ -21,6 +21,8 @@ builds:
     ignore:
       - goarch: arm64
         goos: windows
+      - goarch: arm
+        goos: windows
 checksum:
   name_template: 'checksums.txt'
 archives:
