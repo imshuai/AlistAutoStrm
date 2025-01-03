@@ -33,17 +33,14 @@ archives:
       {{- .Arch }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}  
 release:
-  name_template: "{{.ProjectName}} - v{{.Version}}"
+  name_template: "AlistAutoStrm - v{{.Version}}"
   mode: replace
 changelog:
   use: github
   format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
   filters:
     exclude:
-      - '^docs:'
       - '^test:'
-      - '^build:'
-      - '^release:'
       - '^dep:'
       - 'typo'
     include:
