@@ -33,11 +33,10 @@ archives:
       {{- .Version }}-
       {{- replace .Os "darwin" "macos" }}-
       {{- .Arch }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}  
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
 release:
   name_template: "AlistAutoStrm - v{{.Version}}"
   mode: replace
-  replace_existing_artifacts: true
 changelog:
   use: github
   format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
