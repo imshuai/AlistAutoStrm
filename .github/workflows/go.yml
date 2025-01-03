@@ -3,10 +3,11 @@
 name: Build Release
 on:
   push:
+    branches:
+      - master        # Pattern matched against refs/heads
     # Pattern matched against refs/tags
     tags:      
       - 'v*'           # 创建所有tag都运行打包 v* 则 v1.0这种也行
-  workflow_dispatch: 
 jobs:
   build:
     runs-on: ubuntu-latest

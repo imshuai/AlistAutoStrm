@@ -40,7 +40,6 @@ release:
   prerelease: auto
 changelog:
   use: github
-  skip: "auto"
   format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
   filters:
     exclude:
