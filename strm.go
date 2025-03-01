@@ -58,7 +58,7 @@ func (s *Strm) Save() error {
 
 // 生成Strm文件
 func (s *Strm) GenStrm(overwrite bool) error {
-	err := os.MkdirAll(s.LocalDir, 0666)
+	err := os.MkdirAll(s.LocalDir, 0755)
 	if err != nil {
 		return err
 	}
