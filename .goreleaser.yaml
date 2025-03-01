@@ -46,3 +46,4 @@ changelog:
       - '^dep'
       - 'typo'
       - '^build'
+      - '^readme'
