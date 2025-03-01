@@ -184,13 +184,28 @@ func (m *Mission) GetAllStrm(concurrentNum int) []*Strm {
 	go func() {
 		// 创建一个空的 strm 指针切片
 		strms := make([]*Strm, 0)
-		// 无限循环
-		for {
+		// 标记是否继续运行
+		running := true
+		// 循环直到收到停止信号
+		for running {
 			// 从停止通道或 strm 通道中选择
 			select {
-			// 如果停止通道关闭，返回结果
+			// 如果停止通道收到信号
 			case <-stopChan:
+				// 在返回结果前清空 strmChan 中的所有项目
+				draining := true
+				for draining {
+					select {
+					case strm := <-strmChan:
+						strms = append(strms, strm)
+					default:
+						// 如果没有更多项目，停止清空
+						draining = false
+					}
+				}
+				// 发送结果并停止循环
 				resultChan <- strms
+				running = false
 			// 如果接收到一个 strm 对象，将其追加到切片中
 			case strm := <-strmChan:
 				strms = append(strms, strm)
