@@ -113,6 +113,7 @@ endpoints:
   * 当全局 `create-sub-directory` 设置为 `true` 时, 各自目录的 `create-sub-directory` 设置为 `false` 时, 最终结果为 `true`;
 * `force-refresh` 配置项控制是否每次请求时强制刷新远端目录，默认为 `false`，注意: 设置为 `true` 时可能会导致一些问题。  
 * `not-recursive` 配置项控制是否不要递归生成 .strm 文件到子目录中，默认为 `false`。
+* ### **>>> 重要提醒！！！<<<** 对于有访问频率限制的云盘，务必调低并发数，否则可能会被云盘封禁。
 ## Author  
 [@imshuai](https://github.com/imshuai)  
 ## License  
